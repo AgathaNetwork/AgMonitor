@@ -21,6 +21,829 @@
         </div>
     </div>
 
+    <!-- TCP监控列表 -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>TCP监控列表</span>
+                        <div>
+                            <button class="btn btn-primary btn-sm me-2" id="refreshTcpMonitors">刷新</button>
+                            <button class="btn btn-success btn-sm" id="addTcpMonitor">添加监控</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>IP地址</th>
+                                        <th>端口</th>
+                                        <th>启用状态</th>
+                                        <th>上次执行</th>
+                                        <th>间隔(秒)</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tcpMonitorTableBody">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noTcpMonitorsMessage" class="text-center text-muted" style="display: none;">
+                            暂无TCP监控项
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UDP监控列表 -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>UDP监控列表</span>
+                        <div>
+                            <button class="btn btn-primary btn-sm me-2" id="refreshUdpMonitors">刷新</button>
+                            <button class="btn btn-success btn-sm" id="addUdpMonitor">添加监控</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>IP地址</th>
+                                        <th>端口</th>
+                                        <th>启用状态</th>
+                                        <th>上次执行</th>
+                                        <th>间隔(秒)</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="udpMonitorTableBody">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noUdpMonitorsMessage" class="text-center text-muted" style="display: none;">
+                            暂无UDP监控项
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HTTP监控列表 -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>HTTP监控列表</span>
+                        <div>
+                            <button class="btn btn-primary btn-sm me-2" id="refreshHttpMonitors">刷新</button>
+                            <button class="btn btn-success btn-sm" id="addHttpMonitor">添加监控</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>URL</th>
+                                        <th>方法</th>
+                                        <th>启用状态</th>
+                                        <th>上次执行</th>
+                                        <th>间隔(秒)</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="httpMonitorTableBody">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noHttpMonitorsMessage" class="text-center text-muted" style="display: none;">
+                            暂无HTTP监控项
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑监控项模态框 -->
+    <div class="modal fade" id="monitorModal" tabindex="-1" aria-labelledby="monitorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="monitorModalLabel">添加监控</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="monitorForm">
+                        <input type="hidden" id="monitorId">
+                        <input type="hidden" id="monitorType">
+                        
+                        <!-- TCP/UDP 表单字段 -->
+                        <div class="tcp-udp-fields">
+                            <div class="mb-3">
+                                <label for="monitorIp" class="form-label">IP地址</label>
+                                <input type="text" class="form-control" id="monitorIp">
+                            </div>
+                            <div class="mb-3">
+                                <label for="monitorPort" class="form-label">端口</label>
+                                <input type="number" class="form-control" id="monitorPort" min="1" max="65535">
+                            </div>
+                        </div>
+                        
+                        <!-- HTTP 表单字段 -->
+                        <div class="http-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="monitorUrl" class="form-label">URL</label>
+                                <input type="text" class="form-control" id="monitorUrl" placeholder="https://example.com/api">
+                            </div>
+                            <div class="mb-3">
+                                <label for="monitorMethod" class="form-label">请求方法</label>
+                                <select class="form-select" id="monitorMethod">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                    <option value="PATCH">PATCH</option>
+                                    <option value="HEAD">HEAD</option>
+                                    <option value="OPTIONS">OPTIONS</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Headers 配置 -->
+                            <div class="mb-3">
+                                <label for="monitorHeaders" class="form-label">请求头 (JSON格式)</label>
+                                <textarea class="form-control" id="monitorHeaders" rows="3" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'></textarea>
+                            </div>
+                            
+                            <!-- Body 配置 -->
+                            <div class="mb-3">
+                                <label for="monitorBody" class="form-label">请求体</label>
+                                <textarea class="form-control" id="monitorBody" rows="3" placeholder="请求体内容"></textarea>
+                            </div>
+                            
+                            <!-- Form Data 配置 -->
+                            <div class="mb-3">
+                                <label for="monitorFormData" class="form-label">表单数据 (JSON格式)</label>
+                                <textarea class="form-control" id="monitorFormData" rows="3" placeholder='{"key1": "value1", "key2": "value2"}'></textarea>
+                                <div class="form-text">用于POST/PUT等方法的表单数据</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 通用字段 -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="monitorEnabled" checked>
+                            <label class="form-check-label" for="monitorEnabled">启用</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="monitorInterval" class="form-label">间隔(秒)</label>
+                            <input type="number" class="form-control" id="monitorInterval" min="1" value="60">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMonitor">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示模态框 -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">错误提示</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 获取会话cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+            modal.show();
+        }
+
+        // 切换表单字段显示
+        function toggleFormFields(type) {
+            const tcpUdpFields = document.querySelector('.tcp-udp-fields');
+            const httpFields = document.querySelector('.http-fields');
+            
+            if (type === 'http') {
+                tcpUdpFields.style.display = 'none';
+                httpFields.style.display = 'block';
+            } else {
+                tcpUdpFields.style.display = 'block';
+                httpFields.style.display = 'none';
+            }
+        }
+
+        // 加载TCP监控列表
+        async function loadTcpMonitors() {
+            try {
+                const response = await fetch('/api/tcp-monitors', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取TCP监控列表失败');
+                    return;
+                }
+                
+                const tbody = document.getElementById('tcpMonitorTableBody');
+                const noMonitorsMessage = document.getElementById('noTcpMonitorsMessage');
+                
+                if (!data.monitors || data.monitors.length === 0) {
+                    tbody.innerHTML = '';
+                    noMonitorsMessage.style.display = 'block';
+                    return;
+                }
+                
+                noMonitorsMessage.style.display = 'none';
+                
+                tbody.innerHTML = data.monitors.map(monitor => `
+                    <tr>
+                        <td>${monitor.id}</td>
+                        <td>${monitor.ip}</td>
+                        <td>${monitor.port}</td>
+                        <td>${monitor.enabled ? '启用' : '禁用'}</td>
+                        <td>${monitor.last_executed || '从未执行'}</td>
+                        <td>${monitor.interval_seconds}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary edit-tcp-monitor" data-id="${monitor.id}">编辑</button>
+                            <button class="btn btn-sm btn-outline-danger delete-tcp-monitor" data-id="${monitor.id}">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // 绑定编辑和删除事件
+                document.querySelectorAll('.edit-tcp-monitor').forEach(button => {
+                    button.addEventListener('click', () => editTcpMonitor(button.dataset.id));
+                });
+                
+                document.querySelectorAll('.delete-tcp-monitor').forEach(button => {
+                    button.addEventListener('click', () => deleteTcpMonitor(button.dataset.id));
+                });
+            } catch (error) {
+                console.error('Error loading TCP monitors:', error);
+                showError('加载TCP监控列表时发生错误');
+            }
+        }
+
+        // 加载UDP监控列表
+        async function loadUdpMonitors() {
+            try {
+                const response = await fetch('/api/udp-monitors', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取UDP监控列表失败');
+                    return;
+                }
+                
+                const tbody = document.getElementById('udpMonitorTableBody');
+                const noMonitorsMessage = document.getElementById('noUdpMonitorsMessage');
+                
+                if (!data.monitors || data.monitors.length === 0) {
+                    tbody.innerHTML = '';
+                    noMonitorsMessage.style.display = 'block';
+                    return;
+                }
+                
+                noMonitorsMessage.style.display = 'none';
+                
+                tbody.innerHTML = data.monitors.map(monitor => `
+                    <tr>
+                        <td>${monitor.id}</td>
+                        <td>${monitor.ip}</td>
+                        <td>${monitor.port}</td>
+                        <td>${monitor.enabled ? '启用' : '禁用'}</td>
+                        <td>${monitor.last_executed || '从未执行'}</td>
+                        <td>${monitor.interval_seconds}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary edit-udp-monitor" data-id="${monitor.id}">编辑</button>
+                            <button class="btn btn-sm btn-outline-danger delete-udp-monitor" data-id="${monitor.id}">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // 绑定编辑和删除事件
+                document.querySelectorAll('.edit-udp-monitor').forEach(button => {
+                    button.addEventListener('click', () => editUdpMonitor(button.dataset.id));
+                });
+                
+                document.querySelectorAll('.delete-udp-monitor').forEach(button => {
+                    button.addEventListener('click', () => deleteUdpMonitor(button.dataset.id));
+                });
+            } catch (error) {
+                console.error('Error loading UDP monitors:', error);
+                showError('加载UDP监控列表时发生错误');
+            }
+        }
+
+        // 加载HTTP监控列表
+        async function loadHttpMonitors() {
+            try {
+                const response = await fetch('/api/http-monitors', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取HTTP监控列表失败');
+                    return;
+                }
+                
+                const tbody = document.getElementById('httpMonitorTableBody');
+                const noMonitorsMessage = document.getElementById('noHttpMonitorsMessage');
+                
+                if (!data.monitors || data.monitors.length === 0) {
+                    tbody.innerHTML = '';
+                    noMonitorsMessage.style.display = 'block';
+                    return;
+                }
+                
+                noMonitorsMessage.style.display = 'none';
+                
+                tbody.innerHTML = data.monitors.map(monitor => `
+                    <tr>
+                        <td>${monitor.id}</td>
+                        <td>${monitor.url}</td>
+                        <td>${monitor.method}</td>
+                        <td>${monitor.enabled ? '启用' : '禁用'}</td>
+                        <td>${monitor.last_executed || '从未执行'}</td>
+                        <td>${monitor.interval_seconds}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary edit-http-monitor" data-id="${monitor.id}">编辑</button>
+                            <button class="btn btn-sm btn-outline-danger delete-http-monitor" data-id="${monitor.id}">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // 绑定编辑和删除事件
+                document.querySelectorAll('.edit-http-monitor').forEach(button => {
+                    button.addEventListener('click', () => editHttpMonitor(button.dataset.id));
+                });
+                
+                document.querySelectorAll('.delete-http-monitor').forEach(button => {
+                    button.addEventListener('click', () => deleteHttpMonitor(button.dataset.id));
+                });
+            } catch (error) {
+                console.error('Error loading HTTP monitors:', error);
+                showError('加载HTTP监控列表时发生错误');
+            }
+        }
+
+        // 编辑TCP监控项
+        async function editTcpMonitor(id) {
+            try {
+                const response = await fetch(`/api/tcp-monitor/${id}`, {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取TCP监控项失败');
+                    return;
+                }
+                
+                const monitor = data.monitor;
+                
+                // 填充表单
+                document.getElementById('monitorId').value = monitor.id;
+                document.getElementById('monitorType').value = 'tcp';
+                document.getElementById('monitorIp').value = monitor.ip;
+                document.getElementById('monitorPort').value = monitor.port;
+                document.getElementById('monitorEnabled').checked = monitor.enabled;
+                document.getElementById('monitorInterval').value = monitor.interval_seconds;
+                
+                // 切换表单字段显示
+                toggleFormFields('tcp');
+                
+                // 更新模态框标题
+                document.getElementById('monitorModalLabel').textContent = '编辑TCP监控';
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error editing TCP monitor:', error);
+                showError('加载TCP监控项时发生错误');
+            }
+        }
+
+        // 编辑UDP监控项
+        async function editUdpMonitor(id) {
+            try {
+                const response = await fetch(`/api/udp-monitor/${id}`, {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取UDP监控项失败');
+                    return;
+                }
+                
+                const monitor = data.monitor;
+                
+                // 填充表单
+                document.getElementById('monitorId').value = monitor.id;
+                document.getElementById('monitorType').value = 'udp';
+                document.getElementById('monitorIp').value = monitor.ip;
+                document.getElementById('monitorPort').value = monitor.port;
+                document.getElementById('monitorEnabled').checked = monitor.enabled;
+                document.getElementById('monitorInterval').value = monitor.interval_seconds;
+                
+                // 切换表单字段显示
+                toggleFormFields('udp');
+                
+                // 更新模态框标题
+                document.getElementById('monitorModalLabel').textContent = '编辑UDP监控';
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error editing UDP monitor:', error);
+                showError('加载UDP监控项时发生错误');
+            }
+        }
+
+        // 编辑HTTP监控项
+        async function editHttpMonitor(id) {
+            try {
+                const response = await fetch(`/api/http-monitor/${id}`, {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取HTTP监控项失败');
+                    return;
+                }
+                
+                const monitor = data.monitor;
+                
+                // 填充表单
+                document.getElementById('monitorId').value = monitor.id;
+                document.getElementById('monitorType').value = 'http';
+                document.getElementById('monitorUrl').value = monitor.url;
+                document.getElementById('monitorMethod').value = monitor.method;
+                document.getElementById('monitorEnabled').checked = monitor.enabled;
+                document.getElementById('monitorInterval').value = monitor.interval_seconds;
+                
+                // 填充可选字段
+                document.getElementById('monitorHeaders').value = monitor.headers ? JSON.stringify(monitor.headers, null, 2) : '';
+                document.getElementById('monitorBody').value = monitor.body || '';
+                document.getElementById('monitorFormData').value = monitor.form_data ? JSON.stringify(monitor.form_data, null, 2) : '';
+                
+                // 切换表单字段显示
+                toggleFormFields('http');
+                
+                // 更新模态框标题
+                document.getElementById('monitorModalLabel').textContent = '编辑HTTP监控';
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error editing HTTP monitor:', error);
+                showError('加载HTTP监控项时发生错误');
+            }
+        }
+
+        // 删除TCP监控项
+        async function deleteTcpMonitor(id) {
+            if (!confirm('确定要删除这个TCP监控项吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/tcp-monitor/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '删除TCP监控项失败');
+                    return;
+                }
+                
+                // 重新加载列表
+                loadTcpMonitors();
+            } catch (error) {
+                console.error('Error deleting TCP monitor:', error);
+                showError('删除TCP监控项时发生错误');
+            }
+        }
+
+        // 删除UDP监控项
+        async function deleteUdpMonitor(id) {
+            if (!confirm('确定要删除这个UDP监控项吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/udp-monitor/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '删除UDP监控项失败');
+                    return;
+                }
+                
+                // 重新加载列表
+                loadUdpMonitors();
+            } catch (error) {
+                console.error('Error deleting UDP monitor:', error);
+                showError('删除UDP监控项时发生错误');
+            }
+        }
+
+        // 删除HTTP监控项
+        async function deleteHttpMonitor(id) {
+            if (!confirm('确定要删除这个HTTP监控项吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/http-monitor/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '删除HTTP监控项失败');
+                    return;
+                }
+                
+                // 重新加载列表
+                loadHttpMonitors();
+            } catch (error) {
+                console.error('Error deleting HTTP monitor:', error);
+                showError('删除HTTP监控项时发生错误');
+            }
+        }
+
+        // 保存监控项
+        async function saveMonitor() {
+            try {
+                const id = document.getElementById('monitorId').value;
+                const type = document.getElementById('monitorType').value;
+                const enabled = document.getElementById('monitorEnabled').checked;
+                const intervalSeconds = parseInt(document.getElementById('monitorInterval').value);
+                
+                let url, method, bodyData;
+                
+                if (type === 'http') {
+                    // HTTP监控数据
+                    const urlValue = document.getElementById('monitorUrl').value;
+                    const methodValue = document.getElementById('monitorMethod').value;
+                    const headersValue = document.getElementById('monitorHeaders').value;
+                    const bodyValue = document.getElementById('monitorBody').value;
+                    const formDataValue = document.getElementById('monitorFormData').value;
+                    
+                    // 验证URL
+                    if (!urlValue) {
+                        showError('请填写URL');
+                        return;
+                    }
+                    
+                    // 验证并解析JSON字段
+                    let headers = null;
+                    let formData = null;
+                    
+                    if (headersValue) {
+                        try {
+                            headers = JSON.parse(headersValue);
+                        } catch (e) {
+                            showError('请求头格式不正确，请确保是有效的JSON格式');
+                            return;
+                        }
+                    }
+                    
+                    if (formDataValue) {
+                        try {
+                            formData = JSON.parse(formDataValue);
+                        } catch (e) {
+                            showError('表单数据格式不正确，请确保是有效的JSON格式');
+                            return;
+                        }
+                    }
+                    
+                    url = `/api/http-monitor${id ? `/${id}` : ''}`;
+                    method = id ? 'PUT' : 'POST';
+                    bodyData = { 
+                        url: urlValue, 
+                        method: methodValue, 
+                        enabled, 
+                        intervalSeconds,
+                        headers,
+                        body: bodyValue || null,
+                        formData
+                    };
+                } else {
+                    // TCP/UDP监控数据
+                    const ip = document.getElementById('monitorIp').value;
+                    const port = parseInt(document.getElementById('monitorPort').value);
+                    
+                    // 验证IP和端口
+                    if (!ip || !port || port < 1 || port > 65535) {
+                        showError('请填写有效的IP地址和端口');
+                        return;
+                    }
+                    
+                    url = `/api/${type}-monitor${id ? `/${id}` : ''}`;
+                    method = id ? 'PUT' : 'POST';
+                    bodyData = { ip, port, enabled, intervalSeconds };
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getCookie('session')
+                    },
+                    body: JSON.stringify(bodyData)
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '保存监控项失败');
+                    return;
+                }
+                
+                // 关闭模态框
+                const modal = bootstrap.Modal.getInstance(document.getElementById('monitorModal'));
+                modal.hide();
+                
+                // 重新加载对应类型的列表
+                switch (type) {
+                    case 'tcp':
+                        loadTcpMonitors();
+                        break;
+                    case 'udp':
+                        loadUdpMonitors();
+                        break;
+                    case 'http':
+                        loadHttpMonitors();
+                        break;
+                }
+            } catch (error) {
+                console.error('Error saving monitor:', error);
+                showError('保存监控项时发生错误');
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载监控列表
+            loadTcpMonitors();
+            loadUdpMonitors();
+            loadHttpMonitors();
+            
+            // 绑定刷新按钮事件
+            document.getElementById('refreshTcpMonitors').addEventListener('click', loadTcpMonitors);
+            document.getElementById('refreshUdpMonitors').addEventListener('click', loadUdpMonitors);
+            document.getElementById('refreshHttpMonitors').addEventListener('click', loadHttpMonitors);
+            
+            // 绑定添加监控按钮事件
+            document.getElementById('addTcpMonitor').addEventListener('click', () => {
+                // 重置表单
+                document.getElementById('monitorForm').reset();
+                document.getElementById('monitorId').value = '';
+                document.getElementById('monitorType').value = 'tcp';
+                
+                // 切换表单字段显示
+                toggleFormFields('tcp');
+                
+                // 更新模态框标题
+                document.getElementById('monitorModalLabel').textContent = '添加TCP监控';
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
+                modal.show();
+            });
+            
+            document.getElementById('addUdpMonitor').addEventListener('click', () => {
+                // 重置表单
+                document.getElementById('monitorForm').reset();
+                document.getElementById('monitorId').value = '';
+                document.getElementById('monitorType').value = 'udp';
+                
+                // 切换表单字段显示
+                toggleFormFields('udp');
+                
+                // 更新模态框标题
+                document.getElementById('monitorModalLabel').textContent = '添加UDP监控';
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
+                modal.show();
+            });
+            
+            document.getElementById('addHttpMonitor').addEventListener('click', () => {
+                // 重置表单
+                document.getElementById('monitorForm').reset();
+                document.getElementById('monitorId').value = '';
+                document.getElementById('monitorType').value = 'http';
+                
+                // 切换表单字段显示
+                toggleFormFields('http');
+                
+                // 更新模态框标题
+                document.getElementById('monitorModalLabel').textContent = '添加HTTP监控';
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
+                modal.show();
+            });
+            
+            // 绑定保存按钮事件
+            document.getElementById('saveMonitor').addEventListener('click', saveMonitor);
+            
+            // 模态框隐藏时重置表单
+            document.getElementById('monitorModal').addEventListener('hidden.bs.modal', function () {
+                document.getElementById('monitorForm').reset();
+                document.getElementById('monitorId').value = '';
+                document.getElementById('monitorType').value = '';
+                
+                // 重置表单字段显示
+                document.querySelector('.tcp-udp-fields').style.display = 'block';
+                document.querySelector('.http-fields').style.display = 'none';
+            });
+        });
+    </script>
 </body>
 </html>

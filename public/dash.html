@@ -107,7 +107,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>HTTP监控列表</span>
+                        <span>HTTP(S)监控列表</span>
                         <div>
                             <button class="btn btn-primary btn-sm me-2" id="refreshHttpMonitors">刷新</button>
                             <button class="btn btn-success btn-sm" id="addHttpMonitor">添加监控</button>
@@ -121,6 +121,7 @@
                                         <th>ID</th>
                                         <th>URL</th>
                                         <th>方法</th>
+                                        <th>Body类型</th>
                                         <th>启用状态</th>
                                         <th>上次执行</th>
                                         <th>间隔(秒)</th>
@@ -133,7 +134,7 @@
                             </table>
                         </div>
                         <div id="noHttpMonitorsMessage" class="text-center text-muted" style="display: none;">
-                            暂无HTTP监控项
+                            暂无HTTP(S)监控项
                         </div>
                     </div>
                 </div>
@@ -191,14 +192,25 @@
                                 <textarea class="form-control" id="monitorHeaders" rows="3" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'></textarea>
                             </div>
                             
-                            <!-- Body 配置 -->
+                            <!-- Body Type 选择 -->
                             <div class="mb-3">
+                                <label for="monitorBodyType" class="form-label">Body类型</label>
+                                <select class="form-select" id="monitorBodyType">
+                                    <option value="none">无</option>
+                                    <option value="raw">原始数据</option>
+                                    <option value="form-data">表单数据</option>
+                                    <option value="x-www-form-urlencoded">URL编码表单</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Raw Body 配置 -->
+                            <div class="mb-3" id="rawBodySection" style="display: none;">
                                 <label for="monitorBody" class="form-label">请求体</label>
                                 <textarea class="form-control" id="monitorBody" rows="3" placeholder="请求体内容"></textarea>
                             </div>
                             
                             <!-- Form Data 配置 -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="formDataSection" style="display: none;">
                                 <label for="monitorFormData" class="form-label">表单数据 (JSON格式)</label>
                                 <textarea class="form-control" id="monitorFormData" rows="3" placeholder='{"key1": "value1", "key2": "value2"}'></textarea>
                                 <div class="form-text">用于POST/PUT等方法的表单数据</div>
@@ -269,6 +281,24 @@
             } else {
                 tcpUdpFields.style.display = 'block';
                 httpFields.style.display = 'none';
+            }
+        }
+
+        // 切换Body类型显示
+        function toggleBodyTypeFields() {
+            const bodyType = document.getElementById('monitorBodyType').value;
+            const rawBodySection = document.getElementById('rawBodySection');
+            const formDataSection = document.getElementById('formDataSection');
+            
+            // 隐藏所有部分
+            rawBodySection.style.display = 'none';
+            formDataSection.style.display = 'none';
+            
+            // 根据选择显示相应部分
+            if (bodyType === 'raw') {
+                rawBodySection.style.display = 'block';
+            } else if (bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') {
+                formDataSection.style.display = 'block';
             }
         }
 
@@ -396,7 +426,7 @@
                 const data = await response.json();
                 
                 if (!data.success) {
-                    showError(data.message || '获取HTTP监控列表失败');
+                    showError(data.message || '获取HTTP(S)监控列表失败');
                     return;
                 }
                 
@@ -416,6 +446,7 @@
                         <td>${monitor.id}</td>
                         <td>${monitor.url}</td>
                         <td>${monitor.method}</td>
+                        <td>${monitor.body_type || 'none'}</td>
                         <td>${monitor.enabled ? '启用' : '禁用'}</td>
                         <td>${monitor.last_executed || '从未执行'}</td>
                         <td>${monitor.interval_seconds}</td>
@@ -436,7 +467,7 @@
                 });
             } catch (error) {
                 console.error('Error loading HTTP monitors:', error);
-                showError('加载HTTP监控列表时发生错误');
+                showError('加载HTTP(S)监控列表时发生错误');
             }
         }
 
@@ -534,7 +565,7 @@
                 const data = await response.json();
                 
                 if (!data.success) {
-                    showError(data.message || '获取HTTP监控项失败');
+                    showError(data.message || '获取HTTP(S)监控项失败');
                     return;
                 }
                 
@@ -548,23 +579,32 @@
                 document.getElementById('monitorEnabled').checked = monitor.enabled;
                 document.getElementById('monitorInterval').value = monitor.interval_seconds;
                 
+                // 填充Body类型和相关字段
+                const bodyType = monitor.body_type || 'none';
+                document.getElementById('monitorBodyType').value = bodyType;
+                
                 // 填充可选字段
                 document.getElementById('monitorHeaders').value = monitor.headers ? JSON.stringify(monitor.headers, null, 2) : '';
-                document.getElementById('monitorBody').value = monitor.body || '';
-                document.getElementById('monitorFormData').value = monitor.form_data ? JSON.stringify(monitor.form_data, null, 2) : '';
+                
+                if (bodyType === 'raw') {
+                    document.getElementById('monitorBody').value = monitor.body || '';
+                } else if (bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') {
+                    document.getElementById('monitorFormData').value = monitor.form_data ? JSON.stringify(monitor.form_data, null, 2) : '';
+                }
                 
                 // 切换表单字段显示
                 toggleFormFields('http');
+                toggleBodyTypeFields();
                 
                 // 更新模态框标题
-                document.getElementById('monitorModalLabel').textContent = '编辑HTTP监控';
+                document.getElementById('monitorModalLabel').textContent = '编辑HTTP(S)监控';
                 
                 // 显示模态框
                 const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
                 modal.show();
             } catch (error) {
                 console.error('Error editing HTTP monitor:', error);
-                showError('加载HTTP监控项时发生错误');
+                showError('加载HTTP(S)监控项时发生错误');
             }
         }
 
@@ -628,7 +668,7 @@
 
         // 删除HTTP监控项
         async function deleteHttpMonitor(id) {
-            if (!confirm('确定要删除这个HTTP监控项吗？')) {
+            if (!confirm('确定要删除这个HTTP(S)监控项吗？')) {
                 return;
             }
             
@@ -643,7 +683,7 @@
                 const data = await response.json();
                 
                 if (!data.success) {
-                    showError(data.message || '删除HTTP监控项失败');
+                    showError(data.message || '删除HTTP(S)监控项失败');
                     return;
                 }
                 
@@ -651,7 +691,7 @@
                 loadHttpMonitors();
             } catch (error) {
                 console.error('Error deleting HTTP monitor:', error);
-                showError('删除HTTP监控项时发生错误');
+                showError('删除HTTP(S)监控项时发生错误');
             }
         }
 
@@ -666,9 +706,10 @@
                 let url, method, bodyData;
                 
                 if (type === 'http') {
-                    // HTTP监控数据
+                    // HTTP(S)监控数据
                     const urlValue = document.getElementById('monitorUrl').value;
                     const methodValue = document.getElementById('monitorMethod').value;
+                    const bodyTypeValue = document.getElementById('monitorBodyType').value;
                     const headersValue = document.getElementById('monitorHeaders').value;
                     const bodyValue = document.getElementById('monitorBody').value;
                     const formDataValue = document.getElementById('monitorFormData').value;
@@ -692,7 +733,7 @@
                         }
                     }
                     
-                    if (formDataValue) {
+                    if (formDataValue && (bodyTypeValue === 'form-data' || bodyTypeValue === 'x-www-form-urlencoded')) {
                         try {
                             formData = JSON.parse(formDataValue);
                         } catch (e) {
@@ -709,8 +750,9 @@
                         enabled, 
                         intervalSeconds,
                         headers,
-                        body: bodyValue || null,
-                        formData
+                        bodyType: bodyTypeValue,
+                        body: bodyTypeValue === 'raw' ? bodyValue : null,
+                        formData: (bodyTypeValue === 'form-data' || bodyTypeValue === 'x-www-form-urlencoded') ? formData : null
                     };
                 } else {
                     // TCP/UDP监控数据
@@ -778,6 +820,9 @@
             document.getElementById('refreshUdpMonitors').addEventListener('click', loadUdpMonitors);
             document.getElementById('refreshHttpMonitors').addEventListener('click', loadHttpMonitors);
             
+            // 绑定Body类型切换事件
+            document.getElementById('monitorBodyType').addEventListener('change', toggleBodyTypeFields);
+            
             // 绑定添加监控按钮事件
             document.getElementById('addTcpMonitor').addEventListener('click', () => {
                 // 重置表单
@@ -819,11 +864,15 @@
                 document.getElementById('monitorId').value = '';
                 document.getElementById('monitorType').value = 'http';
                 
+                // 重置Body类型相关字段
+                document.getElementById('monitorBodyType').value = 'none';
+                toggleBodyTypeFields();
+                
                 // 切换表单字段显示
                 toggleFormFields('http');
                 
                 // 更新模态框标题
-                document.getElementById('monitorModalLabel').textContent = '添加HTTP监控';
+                document.getElementById('monitorModalLabel').textContent = '添加HTTP(S)监控';
                 
                 // 显示模态框
                 const modal = new bootstrap.Modal(document.getElementById('monitorModal'));
@@ -842,6 +891,11 @@
                 // 重置表单字段显示
                 document.querySelector('.tcp-udp-fields').style.display = 'block';
                 document.querySelector('.http-fields').style.display = 'none';
+                
+                // 重置Body类型相关字段
+                document.getElementById('monitorBodyType').value = 'none';
+                document.getElementById('rawBodySection').style.display = 'none';
+                document.getElementById('formDataSection').style.display = 'none';
             });
         });
     </script>

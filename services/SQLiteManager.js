@@ -72,7 +72,8 @@ class SQLiteManager {
                 interval_seconds INTEGER DEFAULT 60,
                 headers TEXT,
                 body TEXT,
-                form_data TEXT
+                form_data TEXT,
+                body_type TEXT DEFAULT 'none'
             );
         `;
 
@@ -356,13 +357,13 @@ class SQLiteManager {
     // HTTP监控相关方法
     
     // 添加HTTP监控项
-    addHttpMonitor(url, method, enabled = true, intervalSeconds = 60, headers = null, body = null, formData = null) {
+    addHttpMonitor(url, method, enabled = true, intervalSeconds = 60, headers = null, body = null, formData = null, bodyType = 'none') {
         return new Promise((resolve, reject) => {
             const query = `
-                INSERT INTO monitor_http (url, method, enabled, interval_seconds, headers, body, form_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO monitor_http (url, method, enabled, interval_seconds, headers, body, form_data, body_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
-            this.db.run(query, [url, method, enabled ? 1 : 0, intervalSeconds, headers, body, formData], function(err) {
+            this.db.run(query, [url, method, enabled ? 1 : 0, intervalSeconds, headers, body, formData, bodyType], function(err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -373,14 +374,14 @@ class SQLiteManager {
     }
 
     // 更新HTTP监控项
-    updateHttpMonitor(id, url, method, enabled, intervalSeconds, headers, body, formData) {
+    updateHttpMonitor(id, url, method, enabled, intervalSeconds, headers, body, formData, bodyType) {
         return new Promise((resolve, reject) => {
             const query = `
                 UPDATE monitor_http 
-                SET url = ?, method = ?, enabled = ?, interval_seconds = ?, headers = ?, body = ?, form_data = ?
+                SET url = ?, method = ?, enabled = ?, interval_seconds = ?, headers = ?, body = ?, form_data = ?, body_type = ?
                 WHERE id = ?
             `;
-            this.db.run(query, [url, method, enabled ? 1 : 0, intervalSeconds, headers, body, formData, id], (err) => {
+            this.db.run(query, [url, method, enabled ? 1 : 0, intervalSeconds, headers, body, formData, bodyType, id], (err) => {
                 if (err) {
                     reject(err);
                 } else {

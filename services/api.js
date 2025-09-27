@@ -269,7 +269,7 @@ router.get('/udp-monitor/:id', validateSessionAndMaintenance, async (req, res) =
 // 添加HTTP监控项
 router.post('/http-monitor', validateSessionAndMaintenance, async (req, res) => {
     try {
-        const { url, method, enabled, intervalSeconds, headers, body, formData } = req.body;
+        const { url, method, enabled, intervalSeconds, headers, body, formData, bodyType } = req.body;
         
         // 基本验证
         if (!url || !method) {
@@ -282,11 +282,27 @@ router.post('/http-monitor', validateSessionAndMaintenance, async (req, res) => 
             return res.status(400).json({ success: false, message: '无效的请求方法' });
         }
         
-        // 处理headers和formData为JSON字符串
-        const headersStr = headers ? JSON.stringify(headers) : null;
-        const formDataStr = formData ? JSON.stringify(formData) : null;
+        // 验证bodyType
+        const validBodyTypes = ['none', 'form-data', 'x-www-form-urlencoded'];
+        const bodyTypeValue = bodyType || 'none';
+        if (!validBodyTypes.includes(bodyTypeValue)) {
+            return res.status(400).json({ success: false, message: '无效的body类型' });
+        }
         
-        const id = await sqliteManager.addHttpMonitor(url, method, enabled, intervalSeconds, headersStr, body, formDataStr);
+        // 处理headers为JSON字符串
+        const headersStr = headers ? JSON.stringify(headers) : null;
+        
+        // 根据bodyType处理数据
+        let bodyStr = null;
+        let formDataStr = null;
+        
+        if (bodyTypeValue === 'form-data' || bodyTypeValue === 'x-www-form-urlencoded') {
+            formDataStr = formData ? JSON.stringify(formData) : null;
+        } else if (body) {
+            bodyStr = body;
+        }
+        
+        const id = await sqliteManager.addHttpMonitor(url, method, enabled, intervalSeconds, headersStr, bodyStr, formDataStr, bodyTypeValue);
         res.json({ success: true, id, message: 'HTTP监控项添加成功' });
     } catch (err) {
         console.error('Add HTTP monitor error:', err.message);
@@ -298,7 +314,7 @@ router.post('/http-monitor', validateSessionAndMaintenance, async (req, res) => 
 router.put('/http-monitor/:id', validateSessionAndMaintenance, async (req, res) => {
     try {
         const { id } = req.params;
-        const { url, method, enabled, intervalSeconds, headers, body, formData } = req.body;
+        const { url, method, enabled, intervalSeconds, headers, body, formData, bodyType } = req.body;
         
         // 检查监控项是否存在
         const existingMonitor = await sqliteManager.getHttpMonitorById(id);
@@ -312,11 +328,27 @@ router.put('/http-monitor/:id', validateSessionAndMaintenance, async (req, res) 
             return res.status(400).json({ success: false, message: '无效的请求方法' });
         }
         
-        // 处理headers和formData为JSON字符串
-        const headersStr = headers ? JSON.stringify(headers) : null;
-        const formDataStr = formData ? JSON.stringify(formData) : null;
+        // 验证bodyType
+        const validBodyTypes = ['none', 'form-data', 'x-www-form-urlencoded'];
+        const bodyTypeValue = bodyType || 'none';
+        if (!validBodyTypes.includes(bodyTypeValue)) {
+            return res.status(400).json({ success: false, message: '无效的body类型' });
+        }
         
-        await sqliteManager.updateHttpMonitor(id, url, method, enabled, intervalSeconds, headersStr, body, formDataStr);
+        // 处理headers为JSON字符串
+        const headersStr = headers ? JSON.stringify(headers) : null;
+        
+        // 根据bodyType处理数据
+        let bodyStr = null;
+        let formDataStr = null;
+        
+        if (bodyTypeValue === 'form-data' || bodyTypeValue === 'x-www-form-urlencoded') {
+            formDataStr = formData ? JSON.stringify(formData) : null;
+        } else if (body) {
+            bodyStr = body;
+        }
+        
+        await sqliteManager.updateHttpMonitor(id, url, method, enabled, intervalSeconds, headersStr, bodyStr, formDataStr, bodyTypeValue);
         res.json({ success: true, message: 'HTTP监控项更新成功' });
     } catch (err) {
         console.error('Update HTTP monitor error:', err.message);

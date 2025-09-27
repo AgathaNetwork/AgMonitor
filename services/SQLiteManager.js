@@ -76,6 +76,47 @@ class SQLiteManager {
                 body_type TEXT DEFAULT 'none'
             );
         `;
+        
+        // 创建 monitor_tcp_results 表用于存储TCP监控结果
+        const createMonitorTcpResultsTableQuery = `
+            CREATE TABLE IF NOT EXISTS monitor_tcp_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monitor_id INTEGER NOT NULL,
+                timestamp DATETIME NOT NULL,
+                success BOOLEAN NOT NULL,
+                response_time INTEGER,
+                error_message TEXT,
+                FOREIGN KEY (monitor_id) REFERENCES monitor_tcp (id)
+            );
+        `;
+        
+        // 创建 monitor_udp_results 表用于存储UDP监控结果
+        const createMonitorUdpResultsTableQuery = `
+            CREATE TABLE IF NOT EXISTS monitor_udp_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monitor_id INTEGER NOT NULL,
+                timestamp DATETIME NOT NULL,
+                success BOOLEAN NOT NULL,
+                response_time INTEGER,
+                error_message TEXT,
+                FOREIGN KEY (monitor_id) REFERENCES monitor_udp (id)
+            );
+        `;
+        
+        // 创建 monitor_http_results 表用于存储HTTP(S)监控结果
+        const createMonitorHttpResultsTableQuery = `
+            CREATE TABLE IF NOT EXISTS monitor_http_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monitor_id INTEGER NOT NULL,
+                timestamp DATETIME NOT NULL,
+                success BOOLEAN NOT NULL,
+                response_time INTEGER,
+                status_code INTEGER,
+                response_body TEXT,
+                error_message TEXT,
+                FOREIGN KEY (monitor_id) REFERENCES monitor_http (id)
+            );
+        `;
 
         return new Promise((resolve, reject) => {
             this.db.serialize(() => {
@@ -100,6 +141,24 @@ class SQLiteManager {
                 this.db.run(createMonitorHttpTableQuery, (err) => {
                     if (err) {
                         reject(err);
+                    }
+                });
+                
+                this.db.run(createMonitorTcpResultsTableQuery, (err) => {
+                    if (err) {
+                        reject(err);
+                    }
+                });
+                
+                this.db.run(createMonitorUdpResultsTableQuery, (err) => {
+                    if (err) {
+                        reject(err);
+                    }
+                });
+                
+                this.db.run(createMonitorHttpResultsTableQuery, (err) => {
+                    if (err) {
+                        reject(err);
                     } else {
                         resolve();
                     }
@@ -113,7 +172,7 @@ class SQLiteManager {
         return new Promise((resolve, reject) => {
             const query = `
                 INSERT INTO sessions (session, ip_address, timestamp, user_agent)
-                VALUES (?, ?, datetime('now'), ?)
+                VALUES (?, ?, datetime('now', 'localtime'), ?)
             `;
             this.db.run(query, [session, ipAddress, userAgent], (err) => {
                 if (err) {
@@ -235,7 +294,7 @@ class SQLiteManager {
         return new Promise((resolve, reject) => {
             const query = `
                 UPDATE monitor_tcp 
-                SET last_executed = datetime('now')
+                SET last_executed = datetime('now', 'localtime')
                 WHERE id = ?
             `;
             this.db.run(query, [id], (err) => {
@@ -243,6 +302,23 @@ class SQLiteManager {
                     reject(err);
                 } else {
                     resolve();
+                }
+            });
+        });
+    }
+    
+    // 存储TCP监控结果
+    addTcpMonitorResult(monitorId, success, responseTime, errorMessage) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO monitor_tcp_results (monitor_id, timestamp, success, response_time, error_message)
+                VALUES (?, datetime('now', 'localtime'), ?, ?, ?)
+            `;
+            this.db.run(query, [monitorId, success ? 1 : 0, responseTime, errorMessage], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.lastID);
                 }
             });
         });
@@ -341,7 +417,7 @@ class SQLiteManager {
         return new Promise((resolve, reject) => {
             const query = `
                 UPDATE monitor_udp 
-                SET last_executed = datetime('now')
+                SET last_executed = datetime('now', 'localtime')
                 WHERE id = ?
             `;
             this.db.run(query, [id], (err) => {
@@ -349,6 +425,23 @@ class SQLiteManager {
                     reject(err);
                 } else {
                     resolve();
+                }
+            });
+        });
+    }
+    
+    // 存储UDP监控结果
+    addUdpMonitorResult(monitorId, success, responseTime, errorMessage) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO monitor_udp_results (monitor_id, timestamp, success, response_time, error_message)
+                VALUES (?, datetime('now', 'localtime'), ?, ?, ?)
+            `;
+            this.db.run(query, [monitorId, success ? 1 : 0, responseTime, errorMessage], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.lastID);
                 }
             });
         });
@@ -452,7 +545,7 @@ class SQLiteManager {
         return new Promise((resolve, reject) => {
             const query = `
                 UPDATE monitor_http 
-                SET last_executed = datetime('now')
+                SET last_executed = datetime('now', 'localtime')
                 WHERE id = ?
             `;
             this.db.run(query, [id], (err) => {
@@ -460,6 +553,23 @@ class SQLiteManager {
                     reject(err);
                 } else {
                     resolve();
+                }
+            });
+        });
+    }
+    
+    // 存储HTTP(S)监控结果
+    addHttpMonitorResult(monitorId, success, responseTime, statusCode, responseBody, errorMessage) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO monitor_http_results (monitor_id, timestamp, success, response_time, status_code, response_body, error_message)
+                VALUES (?, datetime('now', 'localtime'), ?, ?, ?, ?, ?)
+            `;
+            this.db.run(query, [monitorId, success ? 1 : 0, responseTime, statusCode, responseBody, errorMessage], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.lastID);
                 }
             });
         });

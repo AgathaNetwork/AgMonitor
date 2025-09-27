@@ -3,9 +3,11 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const SQLiteManager = require('./services/SQLiteManager'); // 引入 SQLiteManager
 const apiRoutes = require('./services/api'); // 引入 API 路由
+const MonitoringEngine = require('./services/engine'); // 引入监控引擎
 
 const app = express();
 const sqliteManager = new SQLiteManager(); // 实例化 SQLiteManager
+const monitoringEngine = new MonitoringEngine(); // 实例化监控引擎
 
 // 使用 express.static 提供静态资源
 app.use(express.static('public'));
@@ -36,6 +38,13 @@ sqliteManager.init().then(() => {
     process.exit(1);
 });
 
+// 初始化并启动监控引擎
+monitoringEngine.init().then(() => {
+    monitoringEngine.start();
+}).catch((error) => {
+    console.error('Failed to start monitoring engine:', error);
+});
+
 // 安装并使用 cookie-parser 中间件
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
@@ -48,8 +57,9 @@ app.listen(port, () => {
     }
 });
 
-// 程序退出时关闭数据库连接
+// 程序退出时关闭数据库连接和 stop monitoring engine
 process.on('SIGINT', () => {
     sqliteManager.close();
+    monitoringEngine.stop();
     process.exit(0);
 });

@@ -135,7 +135,7 @@
                             
                             <div class="mb-3">
                                 <label for="pageRoute" class="form-label">路由</label>
-                                <input type="text" class="form-control" id="pageRoute" placeholder="例如: /api/data">
+                                <input type="text" class="form-control" id="pageRoute" placeholder="输入 data 以在 /board/data 访问">
                             </div>
                             
                             <div class="mb-3">
@@ -336,7 +336,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="saveMapConfig">保存配置</button>
+                    <button type="button" class="btn btn-primary" id="saveMapConfig">确定</button>
                 </div>
             </div>
         </div>
@@ -1179,6 +1179,11 @@
             // 使用配置项显示图表
             myChart.setOption(option);
             
+            // 确保图表填充整个容器
+            setTimeout(() => {
+                myChart.resize();
+            }, 100);
+            
             // 绑定省份点击事件
             myChart.on('click', function (params) {
                 if (params.componentType === 'series') {
@@ -1203,6 +1208,9 @@
             
             // 绑定清除监控按钮事件
             document.getElementById('clearMonitor').addEventListener('click', clearMonitor);
+
+
+            mapContainer.chart.resize();
         }
 
         // 选择省份
@@ -1542,6 +1550,18 @@
             document.getElementById('saveHttpComponent').addEventListener('click', saveHttpComponent);
             document.getElementById('saveMapComponent').addEventListener('click', saveMapComponent);
             document.getElementById('saveMapConfig').addEventListener('click', saveMapConfig);
+        });
+        
+        // 监听窗口大小变化，确保地图正确调整大小
+        window.addEventListener('resize', function() {
+            const mapContainer = document.getElementById('chinaMap');
+            if (mapContainer && mapContainer.chart) {
+                // 使用防抖动确保性能
+                clearTimeout(mapContainer.resizeTimer);
+                mapContainer.resizeTimer = setTimeout(() => {
+                    mapContainer.chart.resize();
+                }, 100);
+            }
         });
     </script>
 </body>

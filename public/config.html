@@ -581,6 +581,7 @@
         function addUdpComponent(id = null, data = {}) {
             const componentId = id || generateComponentId();
             const monitorId = data.monitorId || '';
+            const title = data.title || 'UDP监控组件';
             
             // 查找监控项信息用于显示
             const monitor = udpMonitors.find(m => m.id == monitorId);
@@ -594,7 +595,7 @@
             componentElement.setAttribute('draggable', 'true');
             componentElement.innerHTML = `
                 <div class="drag-handle d-flex justify-content-between align-items-center">
-                    <span>UDP监控组件</span>
+                    <span>${title}</span>
                     <div>
                         <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
                         <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
@@ -635,6 +636,7 @@
         function addHttpComponent(id = null, data = {}) {
             const componentId = id || generateComponentId();
             const monitorId = data.monitorId || '';
+            const title = data.title || 'HTTP(S)监控组件';
             
             // 查找监控项信息用于显示
             const monitor = httpMonitors.find(m => m.id == monitorId);
@@ -648,7 +650,7 @@
             componentElement.setAttribute('draggable', 'true');
             componentElement.innerHTML = `
                 <div class="drag-handle d-flex justify-content-between align-items-center">
-                    <span>HTTP(S)监控组件</span>
+                    <span>${title}</span>
                     <div>
                         <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
                         <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
@@ -698,7 +700,7 @@
             componentElement.setAttribute('draggable', 'true');
             componentElement.innerHTML = `
                 <div class="drag-handle d-flex justify-content-between align-items-center">
-                    <span>地图组件</span>
+                    <span>${name}</span>
                     <div>
                         <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
                         <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
@@ -951,16 +953,10 @@
         // 保存地图组件
         function saveMapComponent() {
             const componentId = document.getElementById('mapComponentId').value || generateComponentId();
-            const title = document.getElementById('mapComponentTitle').value.trim();
             const name = document.getElementById('mapComponentName').value;
             
             if (!name) {
                 showError('请输入地图组件名称');
-                return;
-            }
-            
-            if (!title) {
-                showError('请输入地图组件标题');
                 return;
             }
             
@@ -979,12 +975,11 @@
                 componentElement.querySelector('.component-data').value = JSON.stringify({
                     type: 'map', 
                     name, 
-                    config: oldData.config || '{}',
-                    title 
+                    config: oldData.config || '{}'
                 });
             } else {
                 // 添加新组件
-                addMapComponent(componentId, {name, title});
+                addMapComponent(componentId, {name});
             }
             
             // 关闭模态框
@@ -1435,7 +1430,6 @@
 
                 // 填充表单
                 document.getElementById('pageId').value = page.id;
-                document.getElementById('pageTitle').value = page.title || '';
                 document.getElementById('pageEnabled').checked = page.enabled;
                 document.getElementById('pageRoute').value = page.route || '';
                 
@@ -1458,6 +1452,8 @@
                                     case 'map':
                                         addMapComponent(null, component);
                                         break;
+                                    case 'title':
+                                        document.getElementById('pageTitle').value = component.title || '';
                                 }
                             });
                         }

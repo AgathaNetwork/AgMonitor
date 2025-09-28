@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>页面配置</title>
     <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <script src="/js/echarts.min.js"></script>
+    <script src="/js/china.js"></script>
     <style>
         .draggable-item {
             cursor: move;
@@ -392,6 +394,20 @@
         let tcpMonitors = [];
         let udpMonitors = [];
         let httpMonitors = [];
+
+        // 根据ID获取监控项
+        function getMonitorById(type, id) {
+            switch(type) {
+                case 'tcp':
+                    return tcpMonitors.find(m => m.id == id);
+                case 'udp':
+                    return udpMonitors.find(m => m.id == id);
+                case 'http':
+                    return httpMonitors.find(m => m.id == id);
+                default:
+                    return null;
+            }
+        }
 
         // 生成新的组件ID
         function generateComponentId() {
@@ -1051,42 +1067,130 @@
             const mapContainer = document.getElementById('chinaMap');
             mapContainer.innerHTML = '';
             
-            // 创建SVG元素
-            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '100%');
-            svg.setAttribute('viewBox', '0 0 1000 800');
+            // 初始化ECharts实例
+            const myChart = echarts.init(mapContainer);
             
-            // 为每个省份创建占位符
-            provinces.forEach((province, index) => {
-                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                
-                // 创建矩形代表省份 (简化版地图)
-                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                rect.setAttribute('x', (index % 10) * 90 + 20);
-                rect.setAttribute('y', Math.floor(index / 10) * 70 + 20);
-                rect.setAttribute('width', 80);
-                rect.setAttribute('height', 60);
-                rect.setAttribute('class', 'province');
-                rect.setAttribute('data-province', province.id);
-                
-                // 创建省份标签
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', (index % 10) * 90 + 60);
-                text.setAttribute('y', Math.floor(index / 10) * 70 + 50);
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('class', 'province-label');
-                text.textContent = province.name.substring(0, 2); // 显示前两个字
-                
-                // 绑定点击事件
-                rect.addEventListener('click', () => selectProvince(province.id, province.name));
-                
-                group.appendChild(rect);
-                group.appendChild(text);
-                svg.appendChild(group);
+            // 获取所有省份名称（这里使用ECharts内置的中国地图数据）
+            const chinaGeoJson = window.echarts?.getMap?.('china')?.geoJson;
+            const provinces = [];
+            if (chinaGeoJson && chinaGeoJson.features) {
+                chinaGeoJson.features.forEach(feature => {
+                    provinces.push({
+                        name: feature.properties.name,
+                        id: feature.id
+                    });
+                });
+            }
+
+            // 如果没有获取到内置地图数据，则使用默认列表
+            const defaultProvinces = [
+                "北京","天津","上海","重庆","河北","山西","辽宁","吉林","黑龙江",
+                "江苏","浙江","安徽","福建","江西","山东","河南","湖北","湖南",
+                "广东","海南","四川","贵州","云南","陕西","甘肃","青海","台湾",
+                "内蒙古","广西","西藏","宁夏","新疆"
+            ];
+            
+            const allProvinces = provinces.length > 0 ? provinces : defaultProvinces.map(name => ({name, id: name}));
+
+            // 地图配置选项
+            const option = {
+                title: {
+                    text: '中国地图',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'item',
+                    showDelay: 0,
+                    transitionDuration: 0.2,
+                    formatter: function (params) {
+                        const provinceName = params.name;
+                        const config = provinceConfig[params.name]; // 使用省份名称作为键
+                        
+                        let tip = provinceName;
+                        if (config) {
+                            let monitorType = '';
+                            switch(config.type) {
+                                case 'tcp': 
+                                    monitorType = 'TCP监控';
+                                    break;
+                                case 'udp': 
+                                    monitorType = 'UDP监控';
+                                    break;
+                                case 'http': 
+                                    monitorType = 'HTTP(S)监控';
+                                    break;
+                            }
+                            
+                            const monitor = getMonitorById(config.type, config.id);
+                            if (monitor) {
+                                if (config.type === 'http') {
+                                    tip += `<br/>${monitorType}: ${monitor.method} ${monitor.url}`;
+                                } else {
+                                    tip += `<br/>${monitorType}: ${monitor.ip}:${monitor.port}`;
+                                }
+                            } else {
+                                tip += `<br/>${monitorType}: ID ${config.id}`;
+                            }
+                        } else {
+                            tip += '<br/>未配置监控';
+                        }
+                        
+                        return tip;
+                    }
+                },
+                visualMap: {
+                    show: true,
+                    type: 'piecewise',
+                    pieces: [
+                        { value: -1, label: '未配置', color: '#ccc' },
+                        { value: 0, label: '已配置', color: '#198754' }
+                    ],
+                    textStyle: {
+                        color: '#000'
+                    },
+                    left: 'right'
+                },
+                series: [
+                    {
+                        name: '中国地图',
+                        type: 'map',
+                        map: 'china',
+                        roam: false,
+                        emphasis: {
+                            label: {
+                                show: true
+                            }
+                        },
+                        data: allProvinces.map(province => ({
+                            name: province.name,
+                            value: provinceConfig[province.name] ? 0 : -1
+                        })),
+                        nameProperty: 'name',
+                        selectedMode: 'single',
+                        select: {
+                            itemStyle: {
+                                color: '#0d6efd'
+                            }
+                        }
+                    }
+                ]
+            };
+
+            // 使用配置项显示图表
+            myChart.setOption(option);
+            
+            // 绑定省份点击事件
+            myChart.on('click', function (params) {
+                if (params.componentType === 'series') {
+                    const provinceName = params.name;
+                    
+                    // 更新选中状态
+                    selectProvince(provinceName, provinceName);
+                }
             });
             
-            mapContainer.appendChild(svg);
+            // 将图表实例存储在容器元素上，以便后续更新
+            mapContainer.chart = myChart;
             
             // 绑定监控类型选择事件
             document.getElementById('monitorType').addEventListener('change', function() {
@@ -1103,19 +1207,12 @@
 
         // 选择省份
         function selectProvince(provinceId, provinceName) {
-            // 更新选中状态
-            document.querySelectorAll('.province').forEach(province => {
-                province.classList.remove('selected');
-            });
-            
-            const provinceElement = document.querySelector(`.province[data-province="${provinceId}"]`);
-            if (provinceElement) {
-                provinceElement.classList.add('selected');
-            }
-            
             // 更新选中省份显示
             document.getElementById('selectedProvince').textContent = provinceName;
             selectedProvince = provinceId;
+            
+            // 更新地图显示
+            updateMapDisplay();
             
             // 启用操作按钮
             document.getElementById('assignMonitor').disabled = false;
@@ -1203,11 +1300,8 @@
             // 保存配置
             provinceConfig[selectedProvince] = { type, id };
             
-            // 更新省份样式
-            const provinceElement = document.querySelector(`.province[data-province="${selectedProvince}"]`);
-            if (provinceElement) {
-                provinceElement.classList.add('province-configured');
-            }
+            // 更新地图显示
+            updateMapDisplay();
             
             alert(`已为 ${document.getElementById('selectedProvince').textContent} 分配监控`);
         }
@@ -1222,11 +1316,8 @@
             // 清除配置
             delete provinceConfig[selectedProvince];
             
-            // 更新省份样式
-            const provinceElement = document.querySelector(`.province[data-province="${selectedProvince}"]`);
-            if (provinceElement) {
-                provinceElement.classList.remove('province-configured');
-            }
+            // 更新地图显示
+            updateMapDisplay();
             
             // 重置选择框
             document.getElementById('monitorType').value = '';
@@ -1238,13 +1329,23 @@
 
         // 更新地图显示
         function updateMapDisplay() {
-            // 为已配置的省份添加样式
-            Object.keys(provinceConfig).forEach(provinceId => {
-                const provinceElement = document.querySelector(`.province[data-province="${provinceId}"]`);
-                if (provinceElement) {
-                    provinceElement.classList.add('province-configured');
-                }
-            });
+            const mapContainer = document.getElementById('chinaMap');
+            if (!mapContainer.chart) return;
+            
+            const chart = mapContainer.chart;
+            
+            // 更新图表数据
+            const option = {
+                series: [{
+                    data: Object.keys(provinceConfig).map(provinceId => ({
+                        name: provinceId,
+                        provinceId: provinceId,
+                        value: 0 // 已配置
+                    }))
+                }]
+            };
+            
+            chart.setOption(option);
         }
 
         // 加载页面配置

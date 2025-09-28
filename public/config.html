@@ -1650,6 +1650,40 @@
                     alert('保存UDP配置时出错');
                 }
             });
+
+            // 保存HTTP配置
+            document.getElementById('saveHttpConfig').addEventListener('click', async function () {
+                const id = document.getElementById('httpId').value;
+                const title = document.getElementById('httpTitle').value; // 获取标题
+                const url = document.getElementById('httpUrl').value;
+                const method = document.getElementById('httpMethod').value;
+                const interval = document.getElementById('httpInterval').value;
+                const enabled = document.getElementById('httpEnabled').checked ? 1 : 0;
+
+                const data = { id, title, url, method, interval_seconds: interval, enabled };
+
+                try {
+                    const response = await fetch('/api/http-monitor', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('HTTP监控配置保存成功');
+                        bootstrap.Modal.getInstance(document.getElementById('httpConfigModal')).hide();
+                        loadHttpMonitors(); // 重新加载HTTP监控列表
+                    } else {
+                        alert('保存失败: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error saving HTTP config:', error);
+                    alert('保存HTTP配置时出错');
+                }
+            });
         });
         
         // 监听窗口大小变化，确保地图正确调整大小

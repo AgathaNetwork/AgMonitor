@@ -8,16 +8,11 @@
     <script src="/js/echarts.min.js"></script>
     <style>
         .component-container {
-            margin-bottom: 30px;
-            padding: 20px;
+            margin-bottom: 15px;
+            padding: 15px;
             border: 1px solid #ddd;
             border-radius: 5px;
             background-color: #f8f9fa;
-        }
-        .component-header {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
         }
         .chart-container {
             width: 100%;
@@ -36,7 +31,7 @@
             color: #dc3545;
         }
         .status-icon {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             margin-left: 10px;
         }
         .status-success {
@@ -52,7 +47,7 @@
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="mb-4">监控面板 - <span id="page-main-title">加载中...</span></h1>
+        <h1 class="mb-4"><span id="page-main-title">加载中...</span></h1>
         <div id="components-container">
             <div class="loading">加载中...</div>
         </div>
@@ -154,55 +149,54 @@
                     componentElement.setAttribute('data-component-type', component.type);
                     
                     switch (component.type) {
+                        case 'title':
+                            // 设置页面主标题
+                            document.getElementById('page-main-title').textContent = component.title || '监控面板';
+                            break;
                         case 'tcp':
                             componentElement.innerHTML = `
-                                <div class="component-header d-flex justify-content-between align-items-center">
-                                    <h3>${component.title || 'TCP监控'}</h3>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>${component.title || 'TCP监控'}</span>
                                     <span class="status-icon" id="tcp-status-${component.monitorId}">⏳</span>
                                 </div>
-                                <div id="tcp-chart-${component.monitorId}" class="chart-container"></div>
                             `;
                             container.appendChild(componentElement);
-                            await loadTcpMonitor(component.monitorId, componentElement);
+                            await loadTcpMonitor(component.monitorId, componentElement, component);
                             break;
                         case 'udp':
                             componentElement.innerHTML = `
-                                <div class="component-header d-flex justify-content-between align-items-center">
-                                    <h3>${component.title || 'UDP监控'}</h3>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>${component.title || 'UDP监控'}</span>
                                     <span class="status-icon" id="udp-status-${component.monitorId}">⏳</span>
                                 </div>
-                                <div id="udp-chart-${component.monitorId}" class="chart-container"></div>
                             `;
                             container.appendChild(componentElement);
-                            await loadUdpMonitor(component.monitorId, componentElement);
+                            await loadUdpMonitor(component.monitorId, componentElement, component);
                             break;
                         case 'http':
                             componentElement.innerHTML = `
-                                <div class="component-header d-flex justify-content-between align-items-center">
-                                    <h3>${component.title || 'HTTP监控'}</h3>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>${component.title || 'HTTP监控'}</span>
                                     <span class="status-icon" id="http-status-${component.monitorId}">⏳</span>
                                 </div>
-                                <div id="http-chart-${component.monitorId}" class="chart-container"></div>
                             `;
                             container.appendChild(componentElement);
-                            await loadHttpMonitor(component.monitorId, componentElement);
+                            await loadHttpMonitor(component.monitorId, componentElement, component);
                             break;
                         case 'map':
                             componentElement.innerHTML = `
-                                <div class="component-header">
-                                    <h3>${component.title || '地图组件'}</h3>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>${component.title || '地图组件'}</span>
                                 </div>
-                                <div id="map-chart-${component.name || 'map'}" class="chart-container"></div>
                             `;
                             container.appendChild(componentElement);
                             // 地图组件的初始化逻辑可以在这里添加
                             break;
                         default:
                             componentElement.innerHTML = `
-                                <div class="component-header">
-                                    <h3>${component.title || '未知组件'}</h3>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>${component.title || '未知组件'}</span>
                                 </div>
-                                <p>不支持的组件类型</p>
                             `;
                             container.appendChild(componentElement);
                     }

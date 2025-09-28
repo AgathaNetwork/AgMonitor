@@ -6,6 +6,7 @@
     <title>监控面板</title>
     <link href="/css/bootstrap.min.css" rel="stylesheet">
     <script src="/js/echarts.min.js"></script>
+    <script src="/js/china.js"></script>
     <style>
         .component-container {
             margin-bottom: 15px;
@@ -16,7 +17,7 @@
         }
         .chart-container {
             width: 100%;
-            height: 150px; /* 调整为更合适的默认高度 */
+            height: 500px; /* 增加地图容器高度 */
         }
         .tcp .chart-container,
         .udp .chart-container,
@@ -185,12 +186,14 @@
                             break;
                         case 'map':
                             componentElement.innerHTML = `
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span>${component.name || '地图组件'}</span>
                                 </div>
+                                <div id="map-chart-${component.name || 'map'}" class="chart-container"></div>
                             `;
                             container.appendChild(componentElement);
-                            // 地图组件的初始化逻辑可以在这里添加
+                            // 初始化地图组件
+                            initMapComponent(component, componentElement);
                             break;
                         default:
                             componentElement.innerHTML = `
@@ -307,6 +310,164 @@
         document.addEventListener('DOMContentLoaded', function() {
             initPage();
         });
+        
+        // 初始化地图组件
+        function initMapComponent(component, element) {
+            try {
+                // 获取地图容器
+                const chartContainer = element.querySelector(`#map-chart-${component.name || 'map'}`);
+                if (!chartContainer) return;
+                
+                // 初始化ECharts实例
+                const chart = echarts.init(chartContainer);
+                
+                // 从组件配置中获取省份与监控项的映射关系
+                const provinceConfig = component.config ? JSON.parse(component.config) : {};
+                
+                // 获取所有监控项的状态数据
+                fetchAllMonitorStatus(provinceConfig).then(provinceStatus => {
+                    // 构建省份数据
+                    const provinceData = [];
+                    for (const province in provinceStatus) {
+                        const status = provinceStatus[province];
+                        let itemStyle = {};
+                        
+                        // 根据状态设置颜色
+                        if (status === 'success') {
+                            itemStyle = { areaColor: '#28a745' }; // 绿色 - 全部成功
+                        } else if (status === 'warning') {
+                            itemStyle = { areaColor: '#ffc107' }; // 黄色 - 部分失败
+                        } else if (status === 'danger') {
+                            itemStyle = { areaColor: '#dc3545' }; // 红色 - 全部失败
+                        } else {
+                            itemStyle = { areaColor: '#6c757d' }; // 灰色 - 未知状态
+                        }
+                        
+                        provinceData.push({
+                            name: province,
+                            itemStyle: itemStyle,
+                            status: status
+                        });
+                    }
+                    
+                    // 配置项
+                    const option = {
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: function(params) {
+                                let statusText = '';
+                                switch (params.data.status) {
+                                    case 'success':
+                                        statusText = '正常';
+                                        break;
+                                    case 'warning':
+                                        statusText = '警告';
+                                        break;
+                                    case 'danger':
+                                        statusText = '异常';
+                                        break;
+                                    default:
+                                        statusText = '未知';
+                                }
+                                return params.name + ': ' + statusText;
+                            }
+                        },
+                        series: [
+                            {
+                                name: '监控状态',
+                                type: 'map',
+                                map: 'china',
+                                roam: false,
+                                zoom: 1.2,
+                                selectedMode: false,
+                                label: {
+                                    show: false // 隐藏默认标签
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: false // 隐藏高亮时的标签
+                                    },
+                                    itemStyle: {
+                                        areaColor: '#FFD700' // 鼠标悬停时的高亮颜色
+                                    }
+                                },
+                                data: provinceData
+                            }
+                        ],
+                        visualMap: {
+                            min: 0,
+                            max: 100,
+                            inRange: {
+                                color: ['#6c757d', '#28a745', '#ffc107', '#dc3545']
+                            },
+                            show: false
+                        }
+                    };
+                    
+                    // 设置配置项
+                    chart.setOption(option);
+                    
+                    // 监听窗口大小变化，自适应调整图表大小
+                    window.addEventListener('resize', function() {
+                        chart.resize();
+                    });
+                    
+                    // 首次渲染后主动触发一次resize以确保正确适配容器尺寸
+                    setTimeout(() => chart.resize(), 0);
+                });
+            } catch (error) {
+                console.error('Error initializing map component:', error);
+            }
+        }
+        
+        // 获取所有监控项的状态数据
+        async function fetchAllMonitorStatus(provinceConfig) {
+            const provinceStatus = {};
+            
+            // 创建所有请求的Promise数组
+            const promises = Object.entries(provinceConfig).map(async ([province, config]) => {
+                try {
+                    const { type, id } = config;
+                    let results = [];
+                    
+                    // 根据监控项类型获取最近5次的结果
+                    const response = await fetch(`/board/api/frontend/${type}-monitor/${id}/results?count=5`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        results = data.results;
+                    }
+                    
+                    // 根据结果计算状态
+                    if (results.length === 0) {
+                        provinceStatus[province] = 'unknown'; // 未知状态
+                    } else {
+                        const successCount = results.filter(r => r.success).length;
+                        
+                        if (successCount === results.length) {
+                            provinceStatus[province] = 'success'; // 全部成功 - 绿色
+                        } else if (successCount === 0) {
+                            provinceStatus[province] = 'danger'; // 全部失败 - 红色
+                        } else {
+                            provinceStatus[province] = 'warning'; // 部分失败 - 黄色
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error fetching status for ${province}:`, error);
+                    provinceStatus[province] = 'unknown'; // 出错时设为未知状态
+                }
+            });
+            
+            // 等待所有请求完成
+            await Promise.all(promises);
+            
+            return provinceStatus;
+        }
     </script>
 </body>
 </html>

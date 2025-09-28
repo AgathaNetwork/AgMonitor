@@ -134,6 +134,10 @@
                             </div>
                             
                             <div class="mb-3">
+                                <label for="pageTitle" class="form-label">页面标题</label>
+                                <input type="text" class="form-control" id="pageTitle" placeholder="请输入页面显示标题">
+                            </div>
+                            <div class="mb-3">
                                 <label for="pageRoute" class="form-label">路由</label>
                                 <input type="text" class="form-control" id="pageRoute" placeholder="输入 data 以在 /board/data 访问">
                             </div>
@@ -174,17 +178,21 @@
         </div>
     </div>
 
-    <!-- TCP组件选择模态框 -->
+    <!-- TCP组件配置模态框 -->
     <div class="modal fade" id="tcpComponentModal" tabindex="-1" aria-labelledby="tcpComponentModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="tcpComponentModalLabel">选择TCP监控</h5>
+                    <h5 class="modal-title" id="tcpComponentModalLabel">配置TCP监控组件</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="tcpComponentForm">
                         <input type="hidden" id="tcpComponentId">
+                        <div class="mb-3">
+                            <label for="tcpTitle" class="form-label">组件标题</label>
+                            <input type="text" class="form-control" id="tcpTitle" placeholder="请输入组件显示标题">
+                        </div>
                         <div class="mb-3">
                             <label for="tcpMonitorSelect" class="form-label">选择TCP监控项</label>
                             <select class="form-select" id="tcpMonitorSelect" required>
@@ -214,6 +222,10 @@
                     <form id="udpComponentForm">
                         <input type="hidden" id="udpComponentId">
                         <div class="mb-3">
+                            <label for="udpTitle" class="form-label">组件标题</label>
+                            <input type="text" class="form-control" id="udpTitle" placeholder="请输入组件显示标题">
+                        </div>
+                        <div class="mb-3">
                             <label for="udpMonitorSelect" class="form-label">选择UDP监控项</label>
                             <select class="form-select" id="udpMonitorSelect" required>
                                 <option value="">请选择UDP监控项</option>
@@ -241,6 +253,10 @@
                 <div class="modal-body">
                     <form id="httpComponentForm">
                         <input type="hidden" id="httpComponentId">
+                        <div class="mb-3">
+                            <label for="httpTitle" class="form-label">组件标题</label>
+                            <input type="text" class="form-control" id="httpTitle" placeholder="请输入组件显示标题">
+                        </div>
                         <div class="mb-3">
                             <label for="httpMonitorSelect" class="form-label">选择HTTP(S)监控项</label>
                             <select class="form-select" id="httpMonitorSelect" required>
@@ -510,6 +526,7 @@
         function addTcpComponent(id = null, data = {}) {
             const componentId = id || generateComponentId();
             const monitorId = data.monitorId || '';
+            const title = data.title || 'TCP监控组件';
             
             // 查找监控项信息用于显示
             const monitor = tcpMonitors.find(m => m.id == monitorId);
@@ -523,7 +540,7 @@
             componentElement.setAttribute('draggable', 'true');
             componentElement.innerHTML = `
                 <div class="drag-handle d-flex justify-content-between align-items-center">
-                    <span>TCP监控组件</span>
+                    <span>${title}</span>
                     <div>
                         <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
                         <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
@@ -540,7 +557,7 @@
                     </div>
                 </div>
                 <div class="component-controls">
-                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'tcp', monitorId, interval})}'>
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'tcp', monitorId, interval, title})}'>
                 </div>
             `;
             
@@ -722,6 +739,7 @@
             const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
             
             document.getElementById('tcpComponentId').value = componentId;
+            document.getElementById('tcpTitle').value = componentData.title || 'TCP监控组件';
             document.getElementById('tcpMonitorSelect').value = componentData.monitorId || '';
             
             const modal = new bootstrap.Modal(document.getElementById('tcpComponentModal'));
@@ -735,6 +753,7 @@
             const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
             
             document.getElementById('udpComponentId').value = componentId;
+            document.getElementById('udpTitle').value = componentData.title || 'UDP监控组件';
             document.getElementById('udpMonitorSelect').value = componentData.monitorId || '';
             
             const modal = new bootstrap.Modal(document.getElementById('udpComponentModal'));
@@ -748,6 +767,7 @@
             const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
             
             document.getElementById('httpComponentId').value = componentId;
+            document.getElementById('httpTitle').value = componentData.title || 'HTTP监控组件';
             document.getElementById('httpMonitorSelect').value = componentData.monitorId || '';
             
             const modal = new bootstrap.Modal(document.getElementById('httpComponentModal'));
@@ -784,10 +804,16 @@
         // 保存TCP组件
         function saveTcpComponent() {
             const componentId = document.getElementById('tcpComponentId').value || generateComponentId();
+            const title = document.getElementById('tcpTitle').value.trim();
             const monitorId = document.getElementById('tcpMonitorSelect').value;
             
             if (!monitorId) {
                 showError('请选择TCP监控项');
+                return;
+            }
+            
+            if (!title) {
+                showError('请输入组件标题');
                 return;
             }
             
@@ -799,6 +825,7 @@
             if (currentEditComponentId) {
                 // 更新现有组件
                 const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.drag-handle').querySelector('span').textContent = title;
                 componentElement.querySelector('.component-form').innerHTML = `
                     <div class="row">
                         <div class="col-md-8">
@@ -809,10 +836,10 @@
                         </div>
                     </div>
                 `;
-                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'tcp', monitorId, interval});
+                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'tcp', monitorId, interval, title});
             } else {
                 // 添加新组件
-                addTcpComponent(componentId, {monitorId});
+                addTcpComponent(componentId, {monitorId, title});
             }
             
             // 关闭模态框
@@ -826,10 +853,16 @@
         // 保存UDP组件
         function saveUdpComponent() {
             const componentId = document.getElementById('udpComponentId').value || generateComponentId();
+            const title = document.getElementById('udpTitle').value.trim();
             const monitorId = document.getElementById('udpMonitorSelect').value;
             
             if (!monitorId) {
                 showError('请选择UDP监控项');
+                return;
+            }
+
+            if (!title) {
+                showError('请输入组件标题');
                 return;
             }
             
@@ -841,6 +874,7 @@
             if (currentEditComponentId) {
                 // 更新现有组件
                 const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.drag-handle').querySelector('span').textContent = title;
                 componentElement.querySelector('.component-form').innerHTML = `
                     <div class="row">
                         <div class="col-md-8">
@@ -851,10 +885,10 @@
                         </div>
                     </div>
                 `;
-                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'udp', monitorId, interval});
+                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'udp', monitorId, interval, title});
             } else {
                 // 添加新组件
-                addUdpComponent(componentId, {monitorId});
+                addUdpComponent(componentId, {monitorId, title});
             }
             
             // 关闭模态框
@@ -868,10 +902,16 @@
         // 保存HTTP组件
         function saveHttpComponent() {
             const componentId = document.getElementById('httpComponentId').value || generateComponentId();
+            const title = document.getElementById('httpTitle').value.trim();
             const monitorId = document.getElementById('httpMonitorSelect').value;
             
             if (!monitorId) {
                 showError('请选择HTTP(S)监控项');
+                return;
+            }
+
+            if (!title) {
+                showError('请输入组件标题');
                 return;
             }
             
@@ -883,6 +923,7 @@
             if (currentEditComponentId) {
                 // 更新现有组件
                 const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.drag-handle').querySelector('span').textContent = title;
                 componentElement.querySelector('.component-form').innerHTML = `
                     <div class="row">
                         <div class="col-md-8">
@@ -893,10 +934,10 @@
                         </div>
                     </div>
                 `;
-                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'http', monitorId, interval});
+                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'http', monitorId, interval, title});
             } else {
                 // 添加新组件
-                addHttpComponent(componentId, {monitorId});
+                addHttpComponent(componentId, {monitorId, title});
             }
             
             // 关闭模态框
@@ -910,6 +951,7 @@
         // 保存地图组件
         function saveMapComponent() {
             const componentId = document.getElementById('mapComponentId').value || generateComponentId();
+            const title = document.getElementById('mapComponentTitle').value.trim();
             const name = document.getElementById('mapComponentName').value;
             
             if (!name) {
@@ -917,9 +959,15 @@
                 return;
             }
             
+            if (!title) {
+                showError('请输入地图组件标题');
+                return;
+            }
+            
             if (currentEditComponentId) {
                 // 更新现有组件
                 const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.drag-handle').querySelector('span').textContent = title;
                 componentElement.querySelector('.component-form').innerHTML = `
                     <div class="row">
                         <div class="col-md-12">
@@ -931,11 +979,12 @@
                 componentElement.querySelector('.component-data').value = JSON.stringify({
                     type: 'map', 
                     name, 
-                    config: oldData.config || '{}'
+                    config: oldData.config || '{}',
+                    title 
                 });
             } else {
                 // 添加新组件
-                addMapComponent(componentId, {name});
+                addMapComponent(componentId, {name, title});
             }
             
             // 关闭模态框
@@ -961,6 +1010,7 @@
             
             // 更新组件数据
             const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            componentElement.querySelector('.drag-handle').querySelector('span').textContent = name;
             componentElement.querySelector('.component-form').innerHTML = `
                 <div class="row">
                     <div class="col-md-12">
@@ -1385,6 +1435,7 @@
 
                 // 填充表单
                 document.getElementById('pageId').value = page.id;
+                document.getElementById('pageTitle').value = page.title || '';
                 document.getElementById('pageEnabled').checked = page.enabled;
                 document.getElementById('pageRoute').value = page.route || '';
                 
@@ -1423,11 +1474,17 @@
         // 保存页面配置
         async function savePageConfig() {
             const pageId = document.getElementById('pageId').value;
+            const title = document.getElementById('pageTitle').value.trim();
             const enabled = document.getElementById('pageEnabled').checked;
-            const route = document.getElementById('pageRoute').value;
+            const route = document.getElementById('pageRoute').value.trim();
             
             if (!pageId) {
                 showError('无效的页面ID');
+                return;
+            }
+            
+            if (!title) {
+                showError('请输入页面标题');
                 return;
             }
             
@@ -1448,6 +1505,13 @@
                     console.error('Error parsing component data:', e);
                 }
             });
+
+            // 添加页面标题
+
+            components.push({
+                type: 'title',
+                title: title
+            });
             
             // 将组件配置转换为JSON字符串
             const configJson = JSON.stringify(components);
@@ -1460,6 +1524,7 @@
                         'Authorization': getCookie('session')
                     },
                     body: JSON.stringify({ 
+                        title: title,
                         enabled: enabled,
                         route: route,
                         config: configJson
@@ -1550,6 +1615,41 @@
             document.getElementById('saveHttpComponent').addEventListener('click', saveHttpComponent);
             document.getElementById('saveMapComponent').addEventListener('click', saveMapComponent);
             document.getElementById('saveMapConfig').addEventListener('click', saveMapConfig);
+
+            // 保存UDP配置
+            document.getElementById('saveUdpConfig').addEventListener('click', async function () {
+                const id = document.getElementById('udpId').value;
+                const title = document.getElementById('udpTitle').value; // 获取标题
+                const ip = document.getElementById('udpIp').value;
+                const port = document.getElementById('udpPort').value;
+                const interval = document.getElementById('udpInterval').value;
+                const enabled = document.getElementById('udpEnabled').checked ? 1 : 0;
+
+                const data = { id, title, ip, port, interval_seconds: interval, enabled };
+
+                try {
+                    const response = await fetch('/api/udp-monitor', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': getCookie('session')
+                        },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('UDP监控配置保存成功');
+                        bootstrap.Modal.getInstance(document.getElementById('udpConfigModal')).hide();
+                        loadAllMonitors(); // 重新加载所有监控项以更新列表
+                    } else {
+                        alert('保存失败: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error saving UDP config:', error);
+                    alert('保存UDP配置时出错');
+                }
+            });
         });
         
         // 监听窗口大小变化，确保地图正确调整大小
@@ -1563,6 +1663,49 @@
                 }, 100);
             }
         });
+
+        // 添加组件到页面
+        function addComponentToPage(type, monitor) {
+            const componentList = document.getElementById('componentList');
+            const componentItem = document.createElement('div');
+            componentItem.className = 'component-item';
+            componentItem.dataset.id = Date.now(); // 临时ID
+            componentItem.dataset.type = type;
+            componentItem.dataset.monitorId = monitor.id;
+            componentItem.dataset.title = monitor.title || ''; // 保存标题
+
+            let displayName = '';
+            switch (type) {
+                case 'tcp':
+                    displayName = `TCP: ${monitor.title || monitor.ip + ':' + monitor.port}`;
+                    break;
+                case 'udp':
+                    displayName = `UDP: ${monitor.title || monitor.ip + ':' + monitor.port}`;
+                    break;
+                case 'http':
+                    displayName = `HTTP: ${monitor.title || monitor.method + ' ' + monitor.url}`;
+                    break;
+                case 'map':
+                    displayName = `地图: ${monitor.title || monitor.name}`;
+                    break;
+            }
+
+            componentItem.innerHTML = `
+                <span>${displayName}</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary move-up">上移</button>
+                    <button class="btn btn-sm btn-outline-primary move-down">下移</button>
+                    <button class="btn btn-sm btn-outline-danger remove">移除</button>
+                </div>
+            `;
+
+            componentList.appendChild(componentItem);
+
+            // 绑定事件
+            componentItem.querySelector('.move-up').addEventListener('click', () => moveComponent(componentItem, -1));
+            componentItem.querySelector('.move-down').addEventListener('click', () => moveComponent(componentItem, 1));
+            componentItem.querySelector('.remove').addEventListener('click', () => componentItem.remove());
+        }
     </script>
 </body>
 </html>

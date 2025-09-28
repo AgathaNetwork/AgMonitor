@@ -158,4 +158,61 @@ router.get('/api/frontend/http-monitor/:id', async (req, res) => {
     }
 });
 
+// 前端专用API接口 - 获取TCP监控项最近5次结果
+router.get('/api/frontend/tcp-monitor/:id/results', async (req, res) => {
+    try {
+        const monitorId = req.params.id;
+        const count = parseInt(req.query.count) || 5; // 默认查询最近5条记录
+
+        // 获取最近的TCP监控结果
+        const results = await sqliteManager.getRecentTcpMonitorResults(monitorId, count);
+        
+        res.json({ 
+            success: true, 
+            results: results 
+        });
+    } catch (error) {
+        console.error('Error fetching TCP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 前端专用API接口 - 获取UDP监控项最近5次结果
+router.get('/api/frontend/udp-monitor/:id/results', async (req, res) => {
+    try {
+        const monitorId = req.params.id;
+        const count = parseInt(req.query.count) || 5; // 默认查询最近5条记录
+
+        // 获取最近的UDP监控结果
+        const results = await sqliteManager.getRecentUdpMonitorResults(monitorId, count);
+        
+        res.json({ 
+            success: true, 
+            results: results 
+        });
+    } catch (error) {
+        console.error('Error fetching UDP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 前端专用API接口 - 获取HTTP监控项最近5次结果
+router.get('/api/frontend/http-monitor/:id/results', async (req, res) => {
+    try {
+        const monitorId = req.params.id;
+        const count = parseInt(req.query.count) || 5; // 默认查询最近5条记录
+
+        // 获取最近的HTTP监控结果
+        const results = await sqliteManager.getRecentHttpMonitorResults(monitorId, count);
+        
+        res.json({ 
+            success: true, 
+            results: results 
+        });
+    } catch (error) {
+        console.error('Error fetching HTTP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
 module.exports = router;

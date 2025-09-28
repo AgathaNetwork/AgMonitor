@@ -704,6 +704,66 @@ class SQLiteManager {
             });
         });
     }
+    
+    // 获取TCP监控项最近的结果
+    getRecentTcpMonitorResults(monitorId, count = 5) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT success, timestamp 
+                FROM monitor_tcp_results 
+                WHERE monitor_id = ? 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            `;
+            this.db.all(query, [monitorId, count], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+    
+    // 获取UDP监控项最近的结果
+    getRecentUdpMonitorResults(monitorId, count = 5) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT success, timestamp 
+                FROM monitor_udp_results 
+                WHERE monitor_id = ? 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            `;
+            this.db.all(query, [monitorId, count], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+    
+    // 获取HTTP监控项最近的结果
+    getRecentHttpMonitorResults(monitorId, count = 5) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT success, timestamp 
+                FROM monitor_http_results 
+                WHERE monitor_id = ? 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            `;
+            this.db.all(query, [monitorId, count], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
 }
 
 module.exports = SQLiteManager;

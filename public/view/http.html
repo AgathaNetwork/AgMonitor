@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP(S)监控详情</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>HTTP(S)监控详情</span>
+                        <button class="btn btn-secondary" id="backButton">返回</button>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">监控属性</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p><strong>ID:</strong> <span id="monitorId"></span></p>
+                                <p><strong>URL:</strong> <span id="monitorUrl"></span></p>
+                                <p><strong>方法:</strong> <span id="monitorMethod"></span></p>
+                                <p><strong>Body类型:</strong> <span id="monitorBodyType"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>启用状态:</strong> <span id="monitorEnabled"></span></p>
+                                <p><strong>间隔(秒):</strong> <span id="monitorInterval"></span></p>
+                                <p><strong>上次执行:</strong> <span id="monitorLastExecuted"></span></p>
+                            </div>
+                        </div>
+                        
+                        <h5 class="card-title mt-4">请求头</h5>
+                        <pre id="monitorHeaders" class="bg-light p-3">无</pre>
+                        
+                        <h5 class="card-title mt-4">请求体</h5>
+                        <pre id="monitorBody" class="bg-light p-3">无</pre>
+                        
+                        <h5 class="card-title mt-4">表单数据</h5>
+                        <pre id="monitorFormData" class="bg-light p-3">无</pre>
+                        
+                        <h5 class="card-title mt-4">最近记录</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>时间</th>
+                                        <th>状态</th>
+                                        <th>响应时间(ms)</th>
+                                        <th>状态码</th>
+                                        <th>错误信息</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsTableBody">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noResultsMessage" class="text-center text-muted" style="display: none;">
+                            暂无记录
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示模态框 -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">错误提示</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 获取会话cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+            modal.show();
+        }
+
+        // 获取URL参数
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(window.location.href);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // 加载监控详情
+        async function loadMonitorDetails() {
+            const monitorId = getUrlParameter('id');
+            if (!monitorId) {
+                showError('无效的监控ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/http-monitor/${monitorId}`, {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    showError(data.message || '获取监控详情失败');
+                    return;
+                }
+
+                const monitor = data.monitor;
+
+                // 填充监控属性
+                document.getElementById('monitorId').textContent = monitor.id;
+                document.getElementById('monitorUrl').textContent = monitor.url;
+                document.getElementById('monitorMethod').textContent = monitor.method;
+                document.getElementById('monitorBodyType').textContent = monitor.body_type || 'none';
+                document.getElementById('monitorEnabled').textContent = monitor.enabled ? '启用' : '禁用';
+                document.getElementById('monitorInterval').textContent = monitor.interval_seconds;
+                document.getElementById('monitorLastExecuted').textContent = monitor.last_executed || '从未执行';
+
+                // 填充请求头
+                const headersElement = document.getElementById('monitorHeaders');
+                if (monitor.headers) {
+                    headersElement.textContent = JSON.stringify(monitor.headers, null, 2);
+                } else {
+                    headersElement.textContent = '无';
+                }
+
+                // 填充请求体
+                const bodyElement = document.getElementById('monitorBody');
+                if (monitor.body) {
+                    bodyElement.textContent = monitor.body;
+                } else {
+                    bodyElement.textContent = '无';
+                }
+
+                // 填充表单数据
+                const formDataElement = document.getElementById('monitorFormData');
+                if (monitor.form_data) {
+                    formDataElement.textContent = JSON.stringify(monitor.form_data, null, 2);
+                } else {
+                    formDataElement.textContent = '无';
+                }
+            } catch (error) {
+                console.error('Error loading monitor details:', error);
+                showError('加载监控详情时发生错误');
+            }
+        }
+
+        // 加载监控记录
+        async function loadMonitorResults() {
+            const monitorId = getUrlParameter('id');
+            if (!monitorId) {
+                showError('无效的监控ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/http-monitor/${monitorId}/results?count=10`, {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    showError(data.message || '获取监控记录失败');
+                    return;
+                }
+
+                const tbody = document.getElementById('resultsTableBody');
+                const noResultsMessage = document.getElementById('noResultsMessage');
+
+                if (!data.results || data.results.length === 0) {
+                    tbody.innerHTML = '';
+                    noResultsMessage.style.display = 'block';
+                    return;
+                }
+
+                noResultsMessage.style.display = 'none';
+
+                tbody.innerHTML = data.results.map(result => `
+                    <tr>
+                        <td>${result.id}</td>
+                        <td>${result.timestamp}</td>
+                        <td>${result.success ? '成功' : '失败'}</td>
+                        <td>${result.response_time || 'N/A'}</td>
+                        <td>${result.status_code || 'N/A'}</td>
+                        <td>${result.error_message || 'N/A'}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading monitor results:', error);
+                showError('加载监控记录时发生错误');
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载监控详情和记录
+            loadMonitorDetails();
+            loadMonitorResults();
+
+            // 绑定返回按钮事件
+            document.getElementById('backButton').addEventListener('click', function() {
+                window.location.href = '/dash.html';
+            });
+
+            // 每10秒刷新一次记录
+            setInterval(loadMonitorResults, 10000);
+        });
+    </script>
+</body>
+</html>

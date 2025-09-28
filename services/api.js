@@ -5,6 +5,11 @@ const yaml = require('js-yaml');
 const SQLiteManager = require('./SQLiteManager'); // 引入 SQLiteManager
 const sqliteManager = new SQLiteManager(); // 实例化 SQLiteManager
 const crypto = require('crypto');
+const {
+    getRecentTcpMonitorResults,
+    getRecentUdpMonitorResults,
+    getRecentHttpMonitorResults
+} = require('./query'); // 引入查询函数
 
 // 登录 API
 router.post('/login', async (req, res) => {
@@ -400,6 +405,63 @@ router.get('/http-monitor/:id', validateSessionAndMaintenance, async (req, res) 
     } catch (err) {
         console.error('Get HTTP monitor error:', err.message);
         res.status(500).json({ success: false, message: '获取HTTP监控项失败' });
+    }
+});
+
+// 获取最近的TCP监控记录
+router.get('/tcp-monitor/:id/results', validateSessionAndMaintenance, async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const monitorId = req.params.id;
+        const count = parseInt(req.query.count) || 10; // 默认查询最近10条记录
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        const result = await getRecentTcpMonitorResults(sessionId, monitorId, count);
+        res.json(result);
+    } catch (error) {
+        console.error('Error fetching TCP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 获取最近的UDP监控记录
+router.get('/udp-monitor/:id/results', validateSessionAndMaintenance, async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const monitorId = req.params.id;
+        const count = parseInt(req.query.count) || 10; // 默认查询最近10条记录
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        const result = await getRecentUdpMonitorResults(sessionId, monitorId, count);
+        res.json(result);
+    } catch (error) {
+        console.error('Error fetching UDP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 获取最近的HTTP监控记录
+router.get('/http-monitor/:id/results', validateSessionAndMaintenance, async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const monitorId = req.params.id;
+        const count = parseInt(req.query.count) || 10; // 默认查询最近10条记录
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        const result = await getRecentHttpMonitorResults(sessionId, monitorId, count);
+        res.json(result);
+    } catch (error) {
+        console.error('Error fetching HTTP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
     }
 });
 

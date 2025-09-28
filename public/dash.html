@@ -331,7 +331,7 @@
                 
                 tbody.innerHTML = data.monitors.map(monitor => `
                     <tr>
-                        <td>${monitor.id}</td>
+                        <td><a href="/view/tcp.html?id=${monitor.id}" class="text-decoration-none">${monitor.id}</a></td>
                         <td>${monitor.ip}</td>
                         <td>${monitor.port}</td>
                         <td>${monitor.enabled ? '启用' : '禁用'}</td>
@@ -387,7 +387,7 @@
                 
                 tbody.innerHTML = data.monitors.map(monitor => `
                     <tr>
-                        <td>${monitor.id}</td>
+                        <td><a href="/view/udp.html?id=${monitor.id}" class="text-decoration-none">${monitor.id}</a></td>
                         <td>${monitor.ip}</td>
                         <td>${monitor.port}</td>
                         <td>${monitor.enabled ? '启用' : '禁用'}</td>
@@ -443,7 +443,7 @@
                 
                 tbody.innerHTML = data.monitors.map(monitor => `
                     <tr>
-                        <td>${monitor.id}</td>
+                        <td><a href="/view/http.html?id=${monitor.id}" class="text-decoration-none">${monitor.id}</a></td>
                         <td>${monitor.url}</td>
                         <td>${monitor.method}</td>
                         <td>${monitor.body_type || 'none'}</td>

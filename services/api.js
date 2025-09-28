@@ -11,6 +11,46 @@ const {
     getRecentHttpMonitorResults
 } = require('./query'); // 引入查询函数
 
+// 中间件：验证会话和维护模式
+const validateSessionAndMaintenance = async (req, res, next) => {
+    try {
+        // 读取配置文件
+        const configPath = './config.yml';
+        let config = {};
+        try {
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            config = yaml.load(fileContents);
+        } catch (e) {
+            console.error('Error reading or parsing config.yml:', e);
+            return res.status(500).json({ success: false, message: '服务器配置错误' });
+        }
+
+        const { maintenance } = config;
+
+        // 检查是否处于维护模式
+        if (!maintenance) {
+            return res.status(403).json({ success: false, message: '系统未处于维护模式' });
+        }
+
+        // 验证会话
+        const session = req.headers['authorization'] || req.cookies?.session;
+        if (!session) {
+            return res.status(401).json({ success: false, message: '未提供会话信息' });
+        }
+
+        const isValid = await sqliteManager.validateSession(session);
+        if (!isValid) {
+            return res.status(401).json({ success: false, message: '无效的会话' });
+        }
+
+        next();
+    } catch (err) {
+        console.error('Session validation error:', err.message);
+        res.status(500).json({ success: false, message: '验证失败' });
+    }
+};
+
+
 // 登录 API
 router.post('/login', async (req, res) => {
     try {
@@ -56,44 +96,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 中间件：验证会话和维护模式
-const validateSessionAndMaintenance = async (req, res, next) => {
-    try {
-        // 读取配置文件
-        const configPath = './config.yml';
-        let config = {};
-        try {
-            const fileContents = fs.readFileSync(configPath, 'utf8');
-            config = yaml.load(fileContents);
-        } catch (e) {
-            console.error('Error reading or parsing config.yml:', e);
-            return res.status(500).json({ success: false, message: '服务器配置错误' });
-        }
-
-        const { maintenance } = config;
-
-        // 检查是否处于维护模式
-        if (!maintenance) {
-            return res.status(403).json({ success: false, message: '系统未处于维护模式' });
-        }
-
-        // 验证会话
-        const session = req.headers['authorization'] || req.cookies?.session;
-        if (!session) {
-            return res.status(401).json({ success: false, message: '未提供会话信息' });
-        }
-
-        const isValid = await sqliteManager.validateSession(session);
-        if (!isValid) {
-            return res.status(401).json({ success: false, message: '无效的会话' });
-        }
-
-        next();
-    } catch (err) {
-        console.error('Session validation error:', err.message);
-        res.status(500).json({ success: false, message: '验证失败' });
-    }
-};
 
 // TCP监控API端点
 
@@ -447,7 +449,7 @@ router.get('/udp-monitor/:id/results', validateSessionAndMaintenance, async (req
 });
 
 // 获取最近的HTTP监控记录
-router.get('/http-monitor/:id/results', async (req, res) => {
+router.get('/http-monitor/:id/results', validateSessionAndMaintenance, async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
         const monitorId = req.params.id;
@@ -468,7 +470,7 @@ router.get('/http-monitor/:id/results', async (req, res) => {
 // 页面相关API
 
 // 创建页面
-router.post('/pages', async (req, res) => {
+router.post('/pages', validateSessionAndMaintenance, async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
         const { enabled, route, config } = req.body;
@@ -512,7 +514,7 @@ router.post('/pages', async (req, res) => {
 });
 
 // 获取所有页面
-router.get('/pages', async (req, res) => {
+router.get('/pages', validateSessionAndMaintenance, async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
 
@@ -555,7 +557,7 @@ router.get('/pages', async (req, res) => {
 });
 
 // 删除页面
-router.delete('/page/:id', async (req, res) => {
+router.delete('/page/:id', validateSessionAndMaintenance, async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
         const pageId = req.params.id;
@@ -599,7 +601,7 @@ router.delete('/page/:id', async (req, res) => {
 });
 
 // 获取单个页面
-router.get('/page/:id', async (req, res) => {
+router.get('/page/:id', validateSessionAndMaintenance, async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
         const pageId = req.params.id;
@@ -647,7 +649,7 @@ router.get('/page/:id', async (req, res) => {
 });
 
 // 更新页面
-router.put('/page/:id', async (req, res) => {
+router.put('/page/:id', validateSessionAndMaintenance, async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
         const pageId = req.params.id;

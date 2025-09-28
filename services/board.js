@@ -55,9 +55,12 @@ router.get('/api/frontend/pages', async (req, res) => {
             config: page.config // 添加配置信息
         }));
         
+        // 过滤掉未启用的页面
+        const filteredPages = simplifiedPages.filter(page => page.enabled);
+        
         res.json({ 
             success: true, 
-            pages: simplifiedPages 
+            pages: filteredPages 
         });
     } catch (error) {
         console.error('Error fetching pages:', error);
@@ -65,98 +68,6 @@ router.get('/api/frontend/pages', async (req, res) => {
     }
 });
 
-// 前端专用API接口 - 获取单个TCP监控项（仅返回可用性信息）
-router.get('/api/frontend/tcp-monitor/:id', async (req, res) => {
-    try {
-        const monitorId = req.params.id;
-        
-        // 获取TCP监控项
-        const monitor = await sqliteManager.getTcpMonitorById(monitorId);
-        
-        if (!monitor) {
-            return res.status(404).json({ success: false, message: 'TCP监控项不存在' });
-        }
-        
-        // 只返回必要信息
-        const simplifiedMonitor = {
-            id: monitor.id,
-            ip: monitor.ip,
-            port: monitor.port,
-            enabled: monitor.enabled,
-            interval_seconds: monitor.interval_seconds
-        };
-        
-        res.json({ 
-            success: true, 
-            monitor: simplifiedMonitor 
-        });
-    } catch (error) {
-        console.error('Error fetching TCP monitor:', error);
-        res.status(500).json({ success: false, message: '服务器内部错误' });
-    }
-});
-
-// 前端专用API接口 - 获取单个UDP监控项（仅返回可用性信息）
-router.get('/api/frontend/udp-monitor/:id', async (req, res) => {
-    try {
-        const monitorId = req.params.id;
-        
-        // 获取UDP监控项
-        const monitor = await sqliteManager.getUdpMonitorById(monitorId);
-        
-        if (!monitor) {
-            return res.status(404).json({ success: false, message: 'UDP监控项不存在' });
-        }
-        
-        // 只返回必要信息
-        const simplifiedMonitor = {
-            id: monitor.id,
-            ip: monitor.ip,
-            port: monitor.port,
-            enabled: monitor.enabled,
-            interval_seconds: monitor.interval_seconds
-        };
-        
-        res.json({ 
-            success: true, 
-            monitor: simplifiedMonitor 
-        });
-    } catch (error) {
-        console.error('Error fetching UDP monitor:', error);
-        res.status(500).json({ success: false, message: '服务器内部错误' });
-    }
-});
-
-// 前端专用API接口 - 获取单个HTTP监控项（仅返回可用性信息）
-router.get('/api/frontend/http-monitor/:id', async (req, res) => {
-    try {
-        const monitorId = req.params.id;
-        
-        // 获取HTTP监控项
-        const monitor = await sqliteManager.getHttpMonitorById(monitorId);
-        
-        if (!monitor) {
-            return res.status(404).json({ success: false, message: 'HTTP监控项不存在' });
-        }
-        
-        // 只返回必要信息
-        const simplifiedMonitor = {
-            id: monitor.id,
-            url: monitor.url,
-            method: monitor.method,
-            enabled: monitor.enabled,
-            interval_seconds: monitor.interval_seconds
-        };
-        
-        res.json({ 
-            success: true, 
-            monitor: simplifiedMonitor 
-        });
-    } catch (error) {
-        console.error('Error fetching HTTP monitor:', error);
-        res.status(500).json({ success: false, message: '服务器内部错误' });
-    }
-});
 
 // 前端专用API接口 - 获取TCP监控项最近5次结果
 router.get('/api/frontend/tcp-monitor/:id/results', async (req, res) => {

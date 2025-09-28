@@ -3,6 +3,7 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const SQLiteManager = require('./services/SQLiteManager'); // 引入 SQLiteManager
 const apiRoutes = require('./services/api'); // 引入 API 路由
+const boardRoutes = require('./services/board'); // 引入 Board 路由
 const MonitoringEngine = require('./services/engine'); // 引入监控引擎
 
 const app = express();
@@ -15,6 +16,9 @@ app.use(express.json());
 
 // 引入 API 路由
 app.use('/api', apiRoutes);
+
+// 引入 Board 路由
+app.use('/board', boardRoutes);
 
 // 读取配置文件
 const configPath = './config.yml';

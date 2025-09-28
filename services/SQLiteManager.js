@@ -686,6 +686,24 @@ class SQLiteManager {
             this.db.close();
         }
     }
+    
+    // 根据路由获取页面
+    getPageByRoute(route) {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT * FROM page WHERE route = ? AND enabled = 1`;
+            this.db.get(query, [route], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row) {
+                        // Convert enabled from 0/1 to boolean
+                        row.enabled = row.enabled === 1;
+                    }
+                    resolve(row);
+                }
+            });
+        });
+    }
 }
 
 module.exports = SQLiteManager;

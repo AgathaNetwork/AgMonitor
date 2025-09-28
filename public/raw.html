@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>监控面板</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <script src="/js/echarts.min.js"></script>
+    <style>
+        .component-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .component-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">监控面板 - <span id="page-title">加载中...</span></h1>
+        <div id="components-container">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+    
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let pageId = null;
+        let pageRoute = null;
+        
+        // 初始化页面
+        async function initPage() {
+            // 从URL路径中提取路由参数
+            const pathParts = window.location.pathname.split('/');
+            pageRoute = pathParts[pathParts.length - 1];
+            
+            if (!pageRoute) {
+                document.getElementById('components-container').innerHTML = 
+                    '<div class="alert alert-danger">缺少路由参数</div>';
+                return;
+            }
+            
+            try {
+                // 查找匹配的页面
+                const response = await fetch('/board/api/frontend/pages', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    document.getElementById('components-container').innerHTML = 
+                        '<div class="alert alert-danger">加载页面列表失败</div>';
+                    return;
+                }
+                
+                // 查找匹配的页面（注意：API返回的route是简单名称，不是完整路径）
+                const page = data.pages.find(p => p.route === pageRoute && p.enabled);
+                
+                if (!page) {
+                    document.getElementById('components-container').innerHTML = 
+                        '<div class="alert alert-danger">页面未找到或未启用</div>';
+                    return;
+                }
+                
+                // 设置页面标题
+                document.getElementById('page-title').textContent = pageRoute;
+                pageId = page.id;
+                
+                // 加载页面组件
+                await loadComponents(page);
+            } catch (error) {
+                console.error('Error initializing page:', error);
+                document.getElementById('components-container').innerHTML = 
+                    '<div class="alert alert-danger">初始化页面时发生错误</div>';
+            }
+        }
+        
+        // 获取组件数据并渲染
+        async function loadComponents(page) {
+            try {
+                // 解析页面配置
+                let components = [];
+                try {
+                    // 添加调试信息
+                    console.log('Page config:', page.config);
+                    
+                    if (!page.config) {
+                        document.getElementById('components-container').innerHTML = 
+                            '<div class="alert alert-warning">页面配置为空</div>';
+                        return;
+                    }
+                    
+                    components = JSON.parse(page.config);
+                } catch (e) {
+                    console.error('Error parsing page config:', e);
+                    document.getElementById('components-container').innerHTML = 
+                        `<div class="alert alert-danger">页面配置解析错误: ${e.message}</div>
+                         <div class="alert alert-info">配置内容: ${page.config}</div>`;
+                    return;
+                }
+                
+                // 渲染组件
+                const container = document.getElementById('components-container');
+                container.innerHTML = '';
+                
+                if (components.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info">该页面暂无组件</div>';
+                    return;
+                }
+                
+                for (const component of components) {
+                    const componentElement = document.createElement('div');
+                    componentElement.className = 'component-container';
+                    componentElement.setAttribute('data-component-type', component.type);
+                    
+                    switch (component.type) {
+                        case 'tcp':
+                            componentElement.innerHTML = `
+                                <div class="component-header">
+                                    <h3>TCP监控 - <span class="monitor-title">加载中...</span></h3>
+                                </div>
+                                <p>监控间隔: <span class="monitor-interval">-</span> 秒</p>
+                                <div id="tcp-chart-${component.monitorId}" class="chart-container"></div>
+                            `;
+                            container.appendChild(componentElement);
+                            await loadTcpMonitor(component.monitorId, componentElement);
+                            break;
+                        case 'udp':
+                            componentElement.innerHTML = `
+                                <div class="component-header">
+                                    <h3>UDP监控 - <span class="monitor-title">加载中...</span></h3>
+                                </div>
+                                <p>监控间隔: <span class="monitor-interval">-</span> 秒</p>
+                                <div id="udp-chart-${component.monitorId}" class="chart-container"></div>
+                            `;
+                            container.appendChild(componentElement);
+                            await loadUdpMonitor(component.monitorId, componentElement);
+                            break;
+                        case 'http':
+                            componentElement.innerHTML = `
+                                <div class="component-header">
+                                    <h3>HTTP监控 - <span class="monitor-title">加载中...</span></h3>
+                                </div>
+                                <p>监控间隔: <span class="monitor-interval">-</span> 秒</p>
+                                <div id="http-chart-${component.monitorId}" class="chart-container"></div>
+                            `;
+                            container.appendChild(componentElement);
+                            await loadHttpMonitor(component.monitorId, componentElement);
+                            break;
+                        case 'map':
+                            componentElement.innerHTML = `
+                                <div class="component-header">
+                                    <h3>地图组件 - ${component.name || '未命名'}</h3>
+                                </div>
+                                <div id="map-chart-${component.name || 'map'}" class="chart-container"></div>
+                            `;
+                            container.appendChild(componentElement);
+                            // 地图组件的初始化逻辑可以在这里添加
+                            break;
+                        default:
+                            componentElement.innerHTML = `
+                                <div class="component-header">
+                                    <h3>未知组件类型: ${component.type}</h3>
+                                </div>
+                                <p>不支持的组件类型</p>
+                            `;
+                            container.appendChild(componentElement);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading components:', error);
+                document.getElementById('components-container').innerHTML = 
+                    `<div class="alert alert-danger">加载组件时发生错误: ${error.message}</div>`;
+            }
+        }
+        
+        // 加载TCP监控项数据
+        async function loadTcpMonitor(monitorId, element) {
+            try {
+                const response = await fetch(`/board/api/frontend/tcp-monitor/${monitorId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    element.querySelector('.monitor-title').textContent = '监控项加载失败';
+                    element.querySelector('.monitor-title').classList.add('error');
+                    return;
+                }
+                
+                const monitor = data.monitor;
+                element.querySelector('.monitor-title').textContent = `${monitor.ip}:${monitor.port}`;
+                element.querySelector('.monitor-interval').textContent = monitor.interval_seconds;
+                
+                // 初始化图表（如果需要）
+                // const chart = echarts.init(element.querySelector(`#tcp-chart-${monitorId}`));
+                // 设置图表选项...
+            } catch (error) {
+                console.error('Error loading TCP monitor:', error);
+                element.querySelector('.monitor-title').textContent = '加载错误';
+                element.querySelector('.monitor-title').classList.add('error');
+            }
+        }
+        
+        // 加载UDP监控项数据
+        async function loadUdpMonitor(monitorId, element) {
+            try {
+                const response = await fetch(`/board/api/frontend/udp-monitor/${monitorId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    element.querySelector('.monitor-title').textContent = '监控项加载失败';
+                    element.querySelector('.monitor-title').classList.add('error');
+                    return;
+                }
+                
+                const monitor = data.monitor;
+                element.querySelector('.monitor-title').textContent = `${monitor.ip}:${monitor.port}`;
+                element.querySelector('.monitor-interval').textContent = monitor.interval_seconds;
+                
+                // 初始化图表（如果需要）
+                // const chart = echarts.init(element.querySelector(`#udp-chart-${monitorId}`));
+                // 设置图表选项...
+            } catch (error) {
+                console.error('Error loading UDP monitor:', error);
+                element.querySelector('.monitor-title').textContent = '加载错误';
+                element.querySelector('.monitor-title').classList.add('error');
+            }
+        }
+        
+        // 加载HTTP监控项数据
+        async function loadHttpMonitor(monitorId, element) {
+            try {
+                const response = await fetch(`/board/api/frontend/http-monitor/${monitorId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    element.querySelector('.monitor-title').textContent = '监控项加载失败';
+                    element.querySelector('.monitor-title').classList.add('error');
+                    return;
+                }
+                
+                const monitor = data.monitor;
+                element.querySelector('.monitor-title').textContent = `${monitor.method} ${monitor.url}`;
+                element.querySelector('.monitor-interval').textContent = monitor.interval_seconds;
+                
+                // 初始化图表（如果需要）
+                // const chart = echarts.init(element.querySelector(`#http-chart-${monitorId}`));
+                // 设置图表选项...
+            } catch (error) {
+                console.error('Error loading HTTP monitor:', error);
+                element.querySelector('.monitor-title').textContent = '加载错误';
+                element.querySelector('.monitor-title').classList.add('error');
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initPage();
+        });
+    </script>
+</body>
+</html>

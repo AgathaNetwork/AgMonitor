@@ -56,6 +56,57 @@
             background-color: #0d6efd;
             border-radius: 2px;
         }
+        
+        /* 地图相关样式 */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+        }
+        
+        .province {
+            fill: #ccc;
+            stroke: #fff;
+            stroke-width: 1;
+            cursor: pointer;
+            transition: fill 0.3s;
+        }
+        
+        .province:hover {
+            fill: #aaa;
+        }
+        
+        .province.selected {
+            fill: #0d6efd;
+        }
+        
+        .province-configured {
+            fill: #198754;
+        }
+        
+        .province-configured.selected {
+            fill: #0d6efd;
+        }
+        
+        .province-label {
+            font-size: 10px;
+            pointer-events: none;
+            user-select: none;
+        }
+        
+        .control-panel {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .monitor-select {
+            max-width: 300px;
+        }
     </style>
 </head>
 <body>
@@ -114,6 +165,7 @@
                         <button type="button" class="btn btn-primary btn-lg" data-component-type="tcp">TCP监控</button>
                         <button type="button" class="btn btn-success btn-lg" data-component-type="udp">UDP监控</button>
                         <button type="button" class="btn btn-info btn-lg" data-component-type="http">HTTP(S)监控</button>
+                        <button type="button" class="btn btn-warning btn-lg" data-component-type="map">地图组件</button>
                     </div>
                 </div>
             </div>
@@ -199,6 +251,90 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="button" class="btn btn-primary" id="saveHttpComponent">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 地图组件模态框 -->
+    <div class="modal fade" id="mapComponentModal" tabindex="-1" aria-labelledby="mapComponentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mapComponentModalLabel">添加地图组件</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="mapComponentForm">
+                        <input type="hidden" id="mapComponentId">
+                        <div class="mb-3">
+                            <label for="mapComponentName" class="form-label">地图组件名称</label>
+                            <input type="text" class="form-control" id="mapComponentName" placeholder="请输入地图组件名称">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMapComponent">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 地图组件配置模态框 -->
+    <div class="modal fade" id="mapConfigModal" tabindex="-1" aria-labelledby="mapConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mapConfigModalLabel">地图组件配置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="mapConfigForm">
+                        <input type="hidden" id="mapConfigComponentId">
+                        
+                        <div class="mb-3">
+                            <label for="mapConfigComponentName" class="form-label">地图组件名称</label>
+                            <input type="text" class="form-control" id="mapConfigComponentName" placeholder="请输入地图组件名称">
+                        </div>
+                        
+                        <div class="control-panel mb-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <h5>当前选中省份: <span id="selectedProvince">无</span></h5>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select monitor-select" id="monitorType">
+                                        <option value="">选择监控类型</option>
+                                        <option value="tcp">TCP监控</option>
+                                        <option value="udp">UDP监控</option>
+                                        <option value="http">HTTP(S)监控</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select monitor-select" id="monitorSelect" disabled>
+                                        <option value="">请先选择监控类型</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12 text-end">
+                                    <button type="button" class="btn btn-success" id="assignMonitor" disabled>分配监控</button>
+                                    <button type="button" class="btn btn-danger" id="clearMonitor" disabled>清除监控</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="map-container">
+                            <div id="chinaMap" style="width: 100%; height: 500px;"></div>
+                        </div>
+                        
+                        <input type="hidden" id="provinceConfig">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMapConfig">保存配置</button>
                 </div>
             </div>
         </div>
@@ -373,8 +509,8 @@
                 <div class="drag-handle d-flex justify-content-between align-items-center">
                     <span>TCP监控组件</span>
                     <div>
-                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}">编辑</button>
-                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}">删除</button>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
                     </div>
                 </div>
                 <div class="component-form">
@@ -396,7 +532,10 @@
             document.getElementById('componentsContainer').appendChild(componentElement);
             
             // 绑定编辑和删除事件
-            componentElement.querySelector('.edit-component').addEventListener('click', () => editTcpComponent(componentId));
+            componentElement.querySelector('.edit-component').addEventListener('click', (e) => {
+                e.preventDefault();
+                editTcpComponent(componentId);
+            });
             componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
             
             // 绑定拖动事件
@@ -424,8 +563,8 @@
                 <div class="drag-handle d-flex justify-content-between align-items-center">
                     <span>UDP监控组件</span>
                     <div>
-                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}">编辑</button>
-                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}">删除</button>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
                     </div>
                 </div>
                 <div class="component-form">
@@ -447,7 +586,10 @@
             document.getElementById('componentsContainer').appendChild(componentElement);
             
             // 绑定编辑和删除事件
-            componentElement.querySelector('.edit-component').addEventListener('click', () => editUdpComponent(componentId));
+            componentElement.querySelector('.edit-component').addEventListener('click', (e) => {
+                e.preventDefault();
+                editUdpComponent(componentId);
+            });
             componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
             
             // 绑定拖动事件
@@ -475,8 +617,8 @@
                 <div class="drag-handle d-flex justify-content-between align-items-center">
                     <span>HTTP(S)监控组件</span>
                     <div>
-                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}">编辑</button>
-                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}">删除</button>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
                     </div>
                 </div>
                 <div class="component-form">
@@ -498,7 +640,57 @@
             document.getElementById('componentsContainer').appendChild(componentElement);
             
             // 绑定编辑和删除事件
-            componentElement.querySelector('.edit-component').addEventListener('click', () => editHttpComponent(componentId));
+            componentElement.querySelector('.edit-component').addEventListener('click', (e) => {
+                e.preventDefault();
+                editHttpComponent(componentId);
+            });
+            componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
+            
+            // 绑定拖动事件
+            bindDragEvents(componentElement);
+            
+            return componentId;
+        }
+        
+        // 添加地图组件
+        function addMapComponent(id = null, data = {}) {
+            const componentId = id || generateComponentId();
+            const name = data.name || '地图组件';
+            const config = data.config || '{}';
+            
+            const componentElement = document.createElement('div');
+            componentElement.className = 'draggable-item';
+            componentElement.setAttribute('data-component-id', componentId);
+            componentElement.setAttribute('data-component-type', 'map');
+            componentElement.setAttribute('draggable', 'true');
+            componentElement.innerHTML = `
+                <div class="drag-handle d-flex justify-content-between align-items-center">
+                    <span>地图组件</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}" type="button">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}" type="button">删除</button>
+                    </div>
+                </div>
+                <div class="component-form">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <strong>组件名称:</strong> ${name}
+                        </div>
+                    </div>
+                </div>
+                <div class="component-controls">
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'map', name, config})}'>
+                </div>
+            `;
+            
+            document.getElementById('noComponentsMessage').style.display = 'none';
+            document.getElementById('componentsContainer').appendChild(componentElement);
+            
+            // 绑定编辑和删除事件
+            componentElement.querySelector('.edit-component').addEventListener('click', (e) => {
+                e.preventDefault();
+                editMapComponent(componentId);
+            });
             componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
             
             // 绑定拖动事件
@@ -543,6 +735,33 @@
             document.getElementById('httpMonitorSelect').value = componentData.monitorId || '';
             
             const modal = new bootstrap.Modal(document.getElementById('httpComponentModal'));
+            modal.show();
+        }
+        
+        // 编辑地图组件
+        function editMapComponent(componentId) {
+            currentEditComponentId = componentId;
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
+            
+            // 初始化省份配置
+            try {
+                provinceConfig = JSON.parse(componentData.config || '{}');
+            } catch (e) {
+                provinceConfig = {};
+            }
+            
+            // 填充表单
+            document.getElementById('mapConfigComponentId').value = componentId;
+            document.getElementById('mapConfigComponentName').value = componentData.name || '';
+            
+            // 初始化地图
+            initMap();
+            
+            // 更新地图显示
+            updateMapDisplay();
+            
+            const modal = new bootstrap.Modal(document.getElementById('mapConfigModal'));
             modal.show();
         }
 
@@ -671,6 +890,74 @@
             // 重置当前编辑组件ID
             currentEditComponentId = null;
         }
+        
+        // 保存地图组件
+        function saveMapComponent() {
+            const componentId = document.getElementById('mapComponentId').value || generateComponentId();
+            const name = document.getElementById('mapComponentName').value;
+            
+            if (!name) {
+                showError('请输入地图组件名称');
+                return;
+            }
+            
+            if (currentEditComponentId) {
+                // 更新现有组件
+                const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.component-form').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-12">
+                            <strong>组件名称:</strong> ${name}
+                        </div>
+                    </div>
+                `;
+                const oldData = JSON.parse(componentElement.querySelector('.component-data').value);
+                componentElement.querySelector('.component-data').value = JSON.stringify({
+                    type: 'map', 
+                    name, 
+                    config: oldData.config || '{}'
+                });
+            } else {
+                // 添加新组件
+                addMapComponent(componentId, {name});
+            }
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('mapComponentModal'));
+            modal.hide();
+            
+            // 重置当前编辑组件ID
+            currentEditComponentId = null;
+        }
+
+        // 保存地图配置
+        function saveMapConfig() {
+            const componentId = document.getElementById('mapConfigComponentId').value;
+            const name = document.getElementById('mapConfigComponentName').value;
+            
+            if (!name) {
+                showError('请输入地图组件名称');
+                return;
+            }
+            
+            // 将省份配置转换为JSON字符串
+            const configJson = JSON.stringify(provinceConfig);
+            
+            // 更新组件数据
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            componentElement.querySelector('.component-form').innerHTML = `
+                <div class="row">
+                    <div class="col-md-12">
+                        <strong>组件名称:</strong> ${name}
+                    </div>
+                </div>
+            `;
+            componentElement.querySelector('.component-data').value = JSON.stringify({type: 'map', name, config: configJson});
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('mapConfigModal'));
+            modal.hide();
+        }
 
         // 删除组件
         function removeComponent(componentId) {
@@ -759,6 +1046,207 @@
             draggedItem = null;
         }
 
+        // 初始化地图
+        function initMap() {
+            const mapContainer = document.getElementById('chinaMap');
+            mapContainer.innerHTML = '';
+            
+            // 创建SVG元素
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.setAttribute('viewBox', '0 0 1000 800');
+            
+            // 为每个省份创建占位符
+            provinces.forEach((province, index) => {
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                // 创建矩形代表省份 (简化版地图)
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', (index % 10) * 90 + 20);
+                rect.setAttribute('y', Math.floor(index / 10) * 70 + 20);
+                rect.setAttribute('width', 80);
+                rect.setAttribute('height', 60);
+                rect.setAttribute('class', 'province');
+                rect.setAttribute('data-province', province.id);
+                
+                // 创建省份标签
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', (index % 10) * 90 + 60);
+                text.setAttribute('y', Math.floor(index / 10) * 70 + 50);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('class', 'province-label');
+                text.textContent = province.name.substring(0, 2); // 显示前两个字
+                
+                // 绑定点击事件
+                rect.addEventListener('click', () => selectProvince(province.id, province.name));
+                
+                group.appendChild(rect);
+                group.appendChild(text);
+                svg.appendChild(group);
+            });
+            
+            mapContainer.appendChild(svg);
+            
+            // 绑定监控类型选择事件
+            document.getElementById('monitorType').addEventListener('change', function() {
+                updateMonitorSelect();
+                document.getElementById('monitorSelect').disabled = this.value === '';
+            });
+            
+            // 绑定分配监控按钮事件
+            document.getElementById('assignMonitor').addEventListener('click', assignMonitor);
+            
+            // 绑定清除监控按钮事件
+            document.getElementById('clearMonitor').addEventListener('click', clearMonitor);
+        }
+
+        // 选择省份
+        function selectProvince(provinceId, provinceName) {
+            // 更新选中状态
+            document.querySelectorAll('.province').forEach(province => {
+                province.classList.remove('selected');
+            });
+            
+            const provinceElement = document.querySelector(`.province[data-province="${provinceId}"]`);
+            if (provinceElement) {
+                provinceElement.classList.add('selected');
+            }
+            
+            // 更新选中省份显示
+            document.getElementById('selectedProvince').textContent = provinceName;
+            selectedProvince = provinceId;
+            
+            // 启用操作按钮
+            document.getElementById('assignMonitor').disabled = false;
+            document.getElementById('clearMonitor').disabled = false;
+            
+            // 显示当前省份的配置
+            showProvinceConfig(provinceId);
+        }
+
+        // 显示省份配置
+        function showProvinceConfig(provinceId) {
+            const config = provinceConfig[provinceId];
+            if (config) {
+                document.getElementById('monitorType').value = config.type;
+                updateMonitorSelect();
+                document.getElementById('monitorSelect').value = `${config.type}-${config.id}`;
+            } else {
+                document.getElementById('monitorType').value = '';
+                updateMonitorSelect();
+                document.getElementById('monitorSelect').value = '';
+            }
+        }
+
+        // 更新监控项选择框
+        function updateMonitorSelect() {
+            const monitorType = document.getElementById('monitorType').value;
+            const select = document.getElementById('monitorSelect');
+            
+            // 清空选择框
+            select.innerHTML = '<option value="">请选择监控项</option>';
+            select.disabled = !monitorType;
+            
+            if (!monitorType) {
+                return;
+            }
+            
+            // 根据类型填充选择框
+            let monitors = [];
+            switch (monitorType) {
+                case 'tcp':
+                    monitors = tcpMonitors;
+                    break;
+                case 'udp':
+                    monitors = udpMonitors;
+                    break;
+                case 'http':
+                    monitors = httpMonitors;
+                    break;
+            }
+            
+            monitors.forEach(monitor => {
+                if (monitor.enabled) {
+                    const option = document.createElement('option');
+                    option.value = `${monitorType}-${monitor.id}`;
+                    
+                    if (monitorType === 'http') {
+                        option.textContent = `${monitor.method} ${monitor.url} (ID: ${monitor.id})`;
+                    } else {
+                        option.textContent = `${monitor.ip}:${monitor.port} (ID: ${monitor.id})`;
+                    }
+                    
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        // 分配监控
+        function assignMonitor() {
+            if (!selectedProvince) {
+                showError('请先选择一个省份');
+                return;
+            }
+            
+            const monitorType = document.getElementById('monitorType').value;
+            const monitorValue = document.getElementById('monitorSelect').value;
+            
+            if (!monitorType || !monitorValue) {
+                showError('请选择监控类型和监控项');
+                return;
+            }
+            
+            // 解析监控项信息
+            const [type, id] = monitorValue.split('-');
+            
+            // 保存配置
+            provinceConfig[selectedProvince] = { type, id };
+            
+            // 更新省份样式
+            const provinceElement = document.querySelector(`.province[data-province="${selectedProvince}"]`);
+            if (provinceElement) {
+                provinceElement.classList.add('province-configured');
+            }
+            
+            alert(`已为 ${document.getElementById('selectedProvince').textContent} 分配监控`);
+        }
+
+        // 清除监控
+        function clearMonitor() {
+            if (!selectedProvince) {
+                showError('请先选择一个省份');
+                return;
+            }
+            
+            // 清除配置
+            delete provinceConfig[selectedProvince];
+            
+            // 更新省份样式
+            const provinceElement = document.querySelector(`.province[data-province="${selectedProvince}"]`);
+            if (provinceElement) {
+                provinceElement.classList.remove('province-configured');
+            }
+            
+            // 重置选择框
+            document.getElementById('monitorType').value = '';
+            updateMonitorSelect();
+            document.getElementById('monitorSelect').value = '';
+            
+            alert(`已清除 ${document.getElementById('selectedProvince').textContent} 的监控配置`);
+        }
+
+        // 更新地图显示
+        function updateMapDisplay() {
+            // 为已配置的省份添加样式
+            Object.keys(provinceConfig).forEach(provinceId => {
+                const provinceElement = document.querySelector(`.province[data-province="${provinceId}"]`);
+                if (provinceElement) {
+                    provinceElement.classList.add('province-configured');
+                }
+            });
+        }
+
         // 加载页面配置
         async function loadPageConfig() {
             const pageId = getUrlParameter('id');
@@ -806,6 +1294,9 @@
                                         break;
                                     case 'http':
                                         addHttpComponent(null, component);
+                                        break;
+                                    case 'map':
+                                        addMapComponent(null, component);
                                         break;
                                 }
                             });
@@ -932,6 +1423,14 @@
                             const httpModal = new bootstrap.Modal(document.getElementById('httpComponentModal'));
                             httpModal.show();
                             break;
+                        case 'map':
+                            // 重置表单
+                            document.getElementById('mapComponentForm').reset();
+                            document.getElementById('mapComponentId').value = '';
+                            
+                            const mapModal = new bootstrap.Modal(document.getElementById('mapComponentModal'));
+                            mapModal.show();
+                            break;
                     }
                 });
             });
@@ -940,6 +1439,8 @@
             document.getElementById('saveTcpComponent').addEventListener('click', saveTcpComponent);
             document.getElementById('saveUdpComponent').addEventListener('click', saveUdpComponent);
             document.getElementById('saveHttpComponent').addEventListener('click', saveHttpComponent);
+            document.getElementById('saveMapComponent').addEventListener('click', saveMapComponent);
+            document.getElementById('saveMapConfig').addEventListener('click', saveMapConfig);
         });
     </script>
 </body>

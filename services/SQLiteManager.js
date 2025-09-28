@@ -117,6 +117,28 @@ class SQLiteManager {
                 FOREIGN KEY (monitor_id) REFERENCES monitor_http (id)
             );
         `;
+        
+        // 创建 page 表用于存储页面配置
+        const createPageTableQuery = `
+            CREATE TABLE IF NOT EXISTS page (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at DATETIME NOT NULL,
+                enabled BOOLEAN DEFAULT 1,
+                route TEXT,
+                config TEXT
+            );
+        `;
+        
+        // 创建 map_component 表用于存储地图组件配置
+        const createMapComponentTableQuery = `
+            CREATE TABLE IF NOT EXISTS map_component (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                created_at DATETIME NOT NULL,
+                enabled BOOLEAN DEFAULT 1,
+                config TEXT
+            );
+        `;
 
         return new Promise((resolve, reject) => {
             this.db.serialize(() => {
@@ -157,6 +179,18 @@ class SQLiteManager {
                 });
                 
                 this.db.run(createMonitorHttpResultsTableQuery, (err) => {
+                    if (err) {
+                        reject(err);
+                    }
+                });
+                
+                this.db.run(createPageTableQuery, (err) => {
+                    if (err) {
+                        reject(err);
+                    }
+                });
+                
+                this.db.run(createMapComponentTableQuery, (err) => {
                     if (err) {
                         reject(err);
                     } else {
@@ -570,6 +604,182 @@ class SQLiteManager {
                     reject(err);
                 } else {
                     resolve(this.lastID);
+                }
+            });
+        });
+    }
+
+    // 页面相关方法
+    
+    // 添加页面
+    addPage(enabled = true, route = null, config = null) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO page (created_at, enabled, route, config)
+                VALUES (datetime('now', 'localtime'), ?, ?, ?)
+            `;
+            this.db.run(query, [enabled ? 1 : 0, route, config], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.lastID);
+                }
+            });
+        });
+    }
+
+    // 更新页面
+    updatePage(id, enabled, route, config) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                UPDATE page 
+                SET enabled = ?, route = ?, config = ?
+                WHERE id = ?
+            `;
+            this.db.run(query, [enabled ? 1 : 0, route, config, id], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    // 删除页面
+    deletePage(id) {
+        return new Promise((resolve, reject) => {
+            const query = `DELETE FROM page WHERE id = ?`;
+            this.db.run(query, [id], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    // 获取所有页面
+    getAllPages() {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT * FROM page`;
+            this.db.all(query, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    // Convert enabled from 0/1 to boolean
+                    const pages = rows.map(row => ({
+                        ...row,
+                        enabled: row.enabled === 1
+                    }));
+                    resolve(pages);
+                }
+            });
+        });
+    }
+
+    // 根据ID获取单个页面
+    getPageById(id) {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT * FROM page WHERE id = ?`;
+            this.db.get(query, [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row) {
+                        // Convert enabled from 0/1 to boolean
+                        row.enabled = row.enabled === 1;
+                    }
+                    resolve(row);
+                }
+            });
+        });
+    }
+    
+    // 地图组件相关方法
+    
+    // 添加地图组件
+    addMapComponent(name, enabled = true, config = null) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO map_component (name, created_at, enabled, config)
+                VALUES (?, datetime('now', 'localtime'), ?, ?)
+            `;
+            this.db.run(query, [name, enabled ? 1 : 0, config], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.lastID);
+                }
+            });
+        });
+    }
+
+    // 更新地图组件
+    updateMapComponent(id, name, enabled, config) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                UPDATE map_component 
+                SET name = ?, enabled = ?, config = ?
+                WHERE id = ?
+            `;
+            this.db.run(query, [name, enabled ? 1 : 0, config, id], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    // 删除地图组件
+    deleteMapComponent(id) {
+        return new Promise((resolve, reject) => {
+            const query = `DELETE FROM map_component WHERE id = ?`;
+            this.db.run(query, [id], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    // 获取所有地图组件
+    getAllMapComponents() {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT * FROM map_component`;
+            this.db.all(query, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    // Convert enabled from 0/1 to boolean
+                    const components = rows.map(row => ({
+                        ...row,
+                        enabled: row.enabled === 1
+                    }));
+                    resolve(components);
+                }
+            });
+        });
+    }
+
+    // 根据ID获取单个地图组件
+    getMapComponentById(id) {
+        return new Promise((resolve, reject) => {
+            const query = `SELECT * FROM map_component WHERE id = ?`;
+            this.db.get(query, [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row) {
+                        // Convert enabled from 0/1 to boolean
+                        row.enabled = row.enabled === 1;
+                    }
+                    resolve(row);
                 }
             });
         });

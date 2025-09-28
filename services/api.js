@@ -447,7 +447,7 @@ router.get('/udp-monitor/:id/results', validateSessionAndMaintenance, async (req
 });
 
 // 获取最近的HTTP监控记录
-router.get('/http-monitor/:id/results', validateSessionAndMaintenance, async (req, res) => {
+router.get('/http-monitor/:id/results', async (req, res) => {
     try {
         const sessionId = req.headers.authorization;
         const monitorId = req.params.id;
@@ -461,6 +461,232 @@ router.get('/http-monitor/:id/results', validateSessionAndMaintenance, async (re
         res.json(result);
     } catch (error) {
         console.error('Error fetching HTTP monitor results:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 页面相关API
+
+// 创建页面
+router.post('/pages', async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const { enabled, route, config } = req.body;
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        // 验证会话
+        const isValidSession = await sqliteManager.validateSession(sessionId);
+        if (!isValidSession) {
+            return res.status(401).json({ success: false, message: '无效的会话' });
+        }
+
+        // 读取配置文件
+        const configPath = './config.yml';
+        let configData = {};
+        try {
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            configData = yaml.load(fileContents);
+        } catch (e) {
+            console.error('Error reading or parsing config.yml:', e);
+            return res.status(500).json({ success: false, message: '服务器配置错误' });
+        }
+
+        const { maintenance } = configData;
+
+        // 检查是否处于维护模式
+        if (!maintenance) {
+            return res.status(500).json({ success: false, message: '系统未处于维护模式' });
+        }
+
+        // 创建页面
+        const pageId = await sqliteManager.addPage(enabled, route, config);
+        
+        res.json({ success: true, id: pageId });
+    } catch (error) {
+        console.error('Error creating page:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 获取所有页面
+router.get('/pages', async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        // 验证会话
+        const isValidSession = await sqliteManager.validateSession(sessionId);
+        if (!isValidSession) {
+            return res.status(401).json({ success: false, message: '无效的会话' });
+        }
+
+        // 读取配置文件
+        const configPath = './config.yml';
+        let configData = {};
+        try {
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            configData = yaml.load(fileContents);
+        } catch (e) {
+            console.error('Error reading or parsing config.yml:', e);
+            return res.status(500).json({ success: false, message: '服务器配置错误' });
+        }
+
+        const { maintenance } = configData;
+
+        // 检查是否处于维护模式
+        if (!maintenance) {
+            return res.status(500).json({ success: false, message: '系统未处于维护模式' });
+        }
+
+        // 获取所有页面
+        const pages = await sqliteManager.getAllPages();
+        
+        res.json({ success: true, pages });
+    } catch (error) {
+        console.error('Error fetching pages:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 删除页面
+router.delete('/page/:id', async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const pageId = req.params.id;
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        // 验证会话
+        const isValidSession = await sqliteManager.validateSession(sessionId);
+        if (!isValidSession) {
+            return res.status(401).json({ success: false, message: '无效的会话' });
+        }
+
+        // 读取配置文件
+        const configPath = './config.yml';
+        let configData = {};
+        try {
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            configData = yaml.load(fileContents);
+        } catch (e) {
+            console.error('Error reading or parsing config.yml:', e);
+            return res.status(500).json({ success: false, message: '服务器配置错误' });
+        }
+
+        const { maintenance } = configData;
+
+        // 检查是否处于维护模式
+        if (!maintenance) {
+            return res.status(500).json({ success: false, message: '系统未处于维护模式' });
+        }
+
+        // 删除页面
+        await sqliteManager.deletePage(pageId);
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting page:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 获取单个页面
+router.get('/page/:id', async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const pageId = req.params.id;
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        // 验证会话
+        const isValidSession = await sqliteManager.validateSession(sessionId);
+        if (!isValidSession) {
+            return res.status(401).json({ success: false, message: '无效的会话' });
+        }
+
+        // 读取配置文件
+        const configPath = './config.yml';
+        let configData = {};
+        try {
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            configData = yaml.load(fileContents);
+        } catch (e) {
+            console.error('Error reading or parsing config.yml:', e);
+            return res.status(500).json({ success: false, message: '服务器配置错误' });
+        }
+
+        const { maintenance } = configData;
+
+        // 检查是否处于维护模式
+        if (!maintenance) {
+            return res.status(500).json({ success: false, message: '系统未处于维护模式' });
+        }
+
+        // 获取页面
+        const page = await sqliteManager.getPageById(pageId);
+        
+        if (!page) {
+            return res.status(404).json({ success: false, message: '页面不存在' });
+        }
+        
+        res.json({ success: true, page });
+    } catch (error) {
+        console.error('Error fetching page:', error);
+        res.status(500).json({ success: false, message: '服务器内部错误' });
+    }
+});
+
+// 更新页面
+router.put('/page/:id', async (req, res) => {
+    try {
+        const sessionId = req.headers.authorization;
+        const pageId = req.params.id;
+        const { enabled, route, config } = req.body;
+
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: '未提供会话ID' });
+        }
+
+        // 验证会话
+        const isValidSession = await sqliteManager.validateSession(sessionId);
+        if (!isValidSession) {
+            return res.status(401).json({ success: false, message: '无效的会话' });
+        }
+
+        // 读取配置文件
+        const configPath = './config.yml';
+        let configData = {};
+        try {
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            configData = yaml.load(fileContents);
+        } catch (e) {
+            console.error('Error reading or parsing config.yml:', e);
+            return res.status(500).json({ success: false, message: '服务器配置错误' });
+        }
+
+        const { maintenance } = configData;
+
+        // 检查是否处于维护模式
+        if (!maintenance) {
+            return res.status(500).json({ success: false, message: '系统未处于维护模式' });
+        }
+
+        // 更新页面
+        await sqliteManager.updatePage(pageId, enabled, route, config);
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating page:', error);
         res.status(500).json({ success: false, message: '服务器内部错误' });
     }
 });

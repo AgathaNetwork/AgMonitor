@@ -142,6 +142,44 @@
         </div>
     </div>
 
+    <!-- 页面列表 -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>页面列表</span>
+                        <div>
+                            <button class="btn btn-primary btn-sm me-2" id="refreshPages">刷新</button>
+                            <button class="btn btn-success btn-sm" id="addPage">添加页面</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>创建时间</th>
+                                        <th>路由</th>
+                                        <th>启用状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pageTableBody">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noPagesMessage" class="text-center text-muted" style="display: none;">
+                            暂无页面项
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 添加/编辑监控项模态框 -->
     <div class="modal fade" id="monitorModal" tabindex="-1" aria-labelledby="monitorModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -231,6 +269,35 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="button" class="btn btn-primary" id="saveMonitor">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加页面模态框 -->
+    <div class="modal fade" id="pageModal" tabindex="-1" aria-labelledby="pageModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pageModalLabel">添加页面</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="pageForm">
+                        <input type="hidden" id="pageId">
+                        <div class="mb-3">
+                            <label for="pageRoute" class="form-label">路由</label>
+                            <input type="text" class="form-control" id="pageRoute" placeholder="例如: /api/data">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="pageEnabled" checked>
+                            <label class="form-check-label" for="pageEnabled">启用</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="savePage">保存</button>
                 </div>
             </div>
         </div>
@@ -695,6 +762,143 @@
             }
         }
 
+        // 加载页面列表
+        async function loadPages() {
+            try {
+                const response = await fetch('/api/pages', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '获取页面列表失败');
+                    return;
+                }
+                
+                const tbody = document.getElementById('pageTableBody');
+                const noPagesMessage = document.getElementById('noPagesMessage');
+                
+                if (!data.pages || data.pages.length === 0) {
+                    tbody.innerHTML = '';
+                    noPagesMessage.style.display = 'block';
+                    return;
+                }
+                
+                noPagesMessage.style.display = 'none';
+                
+                tbody.innerHTML = data.pages.map(page => `
+                    <tr>
+                        <td>${page.id}</td>
+                        <td>${page.created_at}</td>
+                        <td>${page.route || 'N/A'}</td>
+                        <td>${page.enabled ? '启用' : '禁用'}</td>
+                        <td>
+                            <a href="config.html?id=${page.id}" class="btn btn-sm btn-outline-primary">配置</a>
+                            <button class="btn btn-sm btn-outline-danger delete-page" data-id="${page.id}">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // 绑定删除事件
+                document.querySelectorAll('.delete-page').forEach(button => {
+                    button.addEventListener('click', () => deletePage(button.dataset.id));
+                });
+            } catch (error) {
+                console.error('Error loading pages:', error);
+                showError('加载页面列表时发生错误');
+            }
+        }
+
+        // 添加页面
+        async function addPage() {
+            // 重置表单
+            document.getElementById('pageForm').reset();
+            document.getElementById('pageId').value = '';
+            
+            // 更新模态框标题
+            document.getElementById('pageModalLabel').textContent = '添加页面';
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('pageModal'));
+            modal.show();
+        }
+
+        // 保存页面
+        async function savePage() {
+            try {
+                const route = document.getElementById('pageRoute').value;
+                const enabled = document.getElementById('pageEnabled').checked;
+                
+                // 验证路由
+                if (!route) {
+                    showError('请填写路由');
+                    return;
+                }
+
+                const response = await fetch('/api/pages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getCookie('session')
+                    },
+                    body: JSON.stringify({ 
+                        enabled: enabled, 
+                        route: route,
+                        config: '[]' // 设置默认配置为[]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '添加页面失败');
+                    return;
+                }
+                
+                // 关闭模态框
+                const modal = bootstrap.Modal.getInstance(document.getElementById('pageModal'));
+                modal.hide();
+                
+                // 重新加载列表
+                loadPages();
+            } catch (error) {
+                console.error('Error adding page:', error);
+                showError('添加页面时发生错误');
+            }
+        }
+
+        // 删除页面
+        async function deletePage(id) {
+            if (!confirm('确定要删除这个页面吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/page/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || '删除页面失败');
+                    return;
+                }
+                
+                // 重新加载列表
+                loadPages();
+            } catch (error) {
+                console.error('Error deleting page:', error);
+                showError('删除页面时发生错误');
+            }
+        }
+
         // 保存监控项
         async function saveMonitor() {
             try {
@@ -814,11 +1018,13 @@
             loadTcpMonitors();
             loadUdpMonitors();
             loadHttpMonitors();
+            loadPages(); // 加载页面列表
             
             // 绑定刷新按钮事件
             document.getElementById('refreshTcpMonitors').addEventListener('click', loadTcpMonitors);
             document.getElementById('refreshUdpMonitors').addEventListener('click', loadUdpMonitors);
             document.getElementById('refreshHttpMonitors').addEventListener('click', loadHttpMonitors);
+            document.getElementById('refreshPages').addEventListener('click', loadPages); // 绑定页面刷新事件
             
             // 绑定Body类型切换事件
             document.getElementById('monitorBodyType').addEventListener('change', toggleBodyTypeFields);
@@ -879,6 +1085,12 @@
                 modal.show();
             });
             
+            // 绑定添加页面按钮事件
+            document.getElementById('addPage').addEventListener('click', addPage);
+            
+            // 绑定页面保存按钮事件
+            document.getElementById('savePage').addEventListener('click', savePage);
+            
             // 绑定保存按钮事件
             document.getElementById('saveMonitor').addEventListener('click', saveMonitor);
             
@@ -896,6 +1108,12 @@
                 document.getElementById('monitorBodyType').value = 'none';
                 document.getElementById('rawBodySection').style.display = 'none';
                 document.getElementById('formDataSection').style.display = 'none';
+            });
+            
+            // 页面模态框隐藏时重置表单
+            document.getElementById('pageModal').addEventListener('hidden.bs.modal', function () {
+                document.getElementById('pageForm').reset();
+                document.getElementById('pageId').value = '';
             });
         });
     </script>

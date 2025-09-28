@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>页面配置</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .draggable-item {
+            cursor: move;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            user-select: none;
+        }
+        
+        .draggable-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .drag-handle {
+            cursor: move;
+            padding: 10px;
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .component-form {
+            padding: 15px;
+        }
+        
+        .component-controls {
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            background-color: #f8f9fa;
+        }
+        
+        .drag-over {
+            border: 2px dashed #0d6efd;
+            background-color: #e7f1ff;
+        }
+        
+        .dragging {
+            opacity: 0.5;
+        }
+        
+        .drag-target-top::before {
+            content: "";
+            position: absolute;
+            top: -5px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background-color: #0d6efd;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>页面配置</span>
+                        <div>
+                            <button class="btn btn-success me-2" id="addComponent">添加组件</button>
+                            <button class="btn btn-primary me-2" id="saveConfig">保存配置</button>
+                            <button class="btn btn-secondary" id="backButton">返回</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form id="pageConfigForm">
+                            <input type="hidden" id="pageId">
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="pageEnabled" checked>
+                                <label class="form-check-label" for="pageEnabled">启用</label>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="pageRoute" class="form-label">路由</label>
+                                <input type="text" class="form-control" id="pageRoute" placeholder="例如: /api/data">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">组件列表</label>
+                                <div id="componentsContainer" class="mt-2 position-relative">
+                                    <!-- 组件将通过JavaScript动态添加 -->
+                                    <div class="text-center text-muted" id="noComponentsMessage">
+                                        暂无组件，请点击"添加组件"按钮添加组件
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加组件模态框 -->
+    <div class="modal fade" id="addComponentModal" tabindex="-1" aria-labelledby="addComponentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addComponentModalLabel">添加组件</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary btn-lg" data-component-type="tcp">TCP监控</button>
+                        <button type="button" class="btn btn-success btn-lg" data-component-type="udp">UDP监控</button>
+                        <button type="button" class="btn btn-info btn-lg" data-component-type="http">HTTP(S)监控</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TCP组件选择模态框 -->
+    <div class="modal fade" id="tcpComponentModal" tabindex="-1" aria-labelledby="tcpComponentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tcpComponentModalLabel">选择TCP监控</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="tcpComponentForm">
+                        <input type="hidden" id="tcpComponentId">
+                        <div class="mb-3">
+                            <label for="tcpMonitorSelect" class="form-label">选择TCP监控项</label>
+                            <select class="form-select" id="tcpMonitorSelect" required>
+                                <option value="">请选择TCP监控项</option>
+                                <!-- 选项将通过JavaScript动态添加 -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveTcpComponent">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UDP组件选择模态框 -->
+    <div class="modal fade" id="udpComponentModal" tabindex="-1" aria-labelledby="udpComponentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="udpComponentModalLabel">选择UDP监控</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="udpComponentForm">
+                        <input type="hidden" id="udpComponentId">
+                        <div class="mb-3">
+                            <label for="udpMonitorSelect" class="form-label">选择UDP监控项</label>
+                            <select class="form-select" id="udpMonitorSelect" required>
+                                <option value="">请选择UDP监控项</option>
+                                <!-- 选项将通过JavaScript动态添加 -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveUdpComponent">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HTTP组件选择模态框 -->
+    <div class="modal fade" id="httpComponentModal" tabindex="-1" aria-labelledby="httpComponentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="httpComponentModalLabel">选择HTTP(S)监控</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="httpComponentForm">
+                        <input type="hidden" id="httpComponentId">
+                        <div class="mb-3">
+                            <label for="httpMonitorSelect" class="form-label">选择HTTP(S)监控项</label>
+                            <select class="form-select" id="httpMonitorSelect" required>
+                                <option value="">请选择HTTP(S)监控项</option>
+                                <!-- 选项将通过JavaScript动态添加 -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveHttpComponent">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示模态框 -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">错误提示</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 获取会话cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+            modal.show();
+        }
+
+        // 获取URL参数
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(window.location.href);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // 组件ID计数器
+        let componentIdCounter = 0;
+        
+        // 当前编辑的组件ID
+        let currentEditComponentId = null;
+        
+        // 存储监控项数据
+        let tcpMonitors = [];
+        let udpMonitors = [];
+        let httpMonitors = [];
+
+        // 生成新的组件ID
+        function generateComponentId() {
+            return 'component_' + (++componentIdCounter);
+        }
+
+        // 加载所有监控项
+        async function loadAllMonitors() {
+            try {
+                // 加载TCP监控项
+                const tcpResponse = await fetch('/api/tcp-monitors', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const tcpData = await tcpResponse.json();
+                if (tcpData.success) {
+                    tcpMonitors = tcpData.monitors;
+                    populateTcpMonitorSelect();
+                }
+                
+                // 加载UDP监控项
+                const udpResponse = await fetch('/api/udp-monitors', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const udpData = await udpResponse.json();
+                if (udpData.success) {
+                    udpMonitors = udpData.monitors;
+                    populateUdpMonitorSelect();
+                }
+                
+                // 加载HTTP监控项
+                const httpResponse = await fetch('/api/http-monitors', {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+                
+                const httpData = await httpResponse.json();
+                if (httpData.success) {
+                    httpMonitors = httpData.monitors;
+                    populateHttpMonitorSelect();
+                }
+            } catch (error) {
+                console.error('Error loading monitors:', error);
+                showError('加载监控项时发生错误');
+            }
+        }
+
+        // 填充TCP监控项选择框
+        function populateTcpMonitorSelect() {
+            const select = document.getElementById('tcpMonitorSelect');
+            select.innerHTML = '<option value="">请选择TCP监控项</option>';
+            
+            tcpMonitors.forEach(monitor => {
+                if (monitor.enabled) {
+                    const option = document.createElement('option');
+                    option.value = monitor.id;
+                    option.textContent = `${monitor.ip}:${monitor.port} (ID: ${monitor.id})`;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        // 填充UDP监控项选择框
+        function populateUdpMonitorSelect() {
+            const select = document.getElementById('udpMonitorSelect');
+            select.innerHTML = '<option value="">请选择UDP监控项</option>';
+            
+            udpMonitors.forEach(monitor => {
+                if (monitor.enabled) {
+                    const option = document.createElement('option');
+                    option.value = monitor.id;
+                    option.textContent = `${monitor.ip}:${monitor.port} (ID: ${monitor.id})`;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        // 填充HTTP监控项选择框
+        function populateHttpMonitorSelect() {
+            const select = document.getElementById('httpMonitorSelect');
+            select.innerHTML = '<option value="">请选择HTTP(S)监控项</option>';
+            
+            httpMonitors.forEach(monitor => {
+                if (monitor.enabled) {
+                    const option = document.createElement('option');
+                    option.value = monitor.id;
+                    option.textContent = `${monitor.method} ${monitor.url} (ID: ${monitor.id})`;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        // 添加TCP组件
+        function addTcpComponent(id = null, data = {}) {
+            const componentId = id || generateComponentId();
+            const monitorId = data.monitorId || '';
+            
+            // 查找监控项信息用于显示
+            const monitor = tcpMonitors.find(m => m.id == monitorId);
+            const displayText = monitor ? `${monitor.ip}:${monitor.port}` : '未知监控项';
+            const interval = monitor ? monitor.interval_seconds : 60;
+            
+            const componentElement = document.createElement('div');
+            componentElement.className = 'draggable-item';
+            componentElement.setAttribute('data-component-id', componentId);
+            componentElement.setAttribute('data-component-type', 'tcp');
+            componentElement.setAttribute('draggable', 'true');
+            componentElement.innerHTML = `
+                <div class="drag-handle d-flex justify-content-between align-items-center">
+                    <span>TCP监控组件</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}">删除</button>
+                    </div>
+                </div>
+                <div class="component-form">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>监控项:</strong> ${displayText}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>间隔:</strong> ${interval}秒
+                        </div>
+                    </div>
+                </div>
+                <div class="component-controls">
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'tcp', monitorId, interval})}'>
+                </div>
+            `;
+            
+            document.getElementById('noComponentsMessage').style.display = 'none';
+            document.getElementById('componentsContainer').appendChild(componentElement);
+            
+            // 绑定编辑和删除事件
+            componentElement.querySelector('.edit-component').addEventListener('click', () => editTcpComponent(componentId));
+            componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
+            
+            // 绑定拖动事件
+            bindDragEvents(componentElement);
+            
+            return componentId;
+        }
+
+        // 添加UDP组件
+        function addUdpComponent(id = null, data = {}) {
+            const componentId = id || generateComponentId();
+            const monitorId = data.monitorId || '';
+            
+            // 查找监控项信息用于显示
+            const monitor = udpMonitors.find(m => m.id == monitorId);
+            const displayText = monitor ? `${monitor.ip}:${monitor.port}` : '未知监控项';
+            const interval = monitor ? monitor.interval_seconds : 60;
+            
+            const componentElement = document.createElement('div');
+            componentElement.className = 'draggable-item';
+            componentElement.setAttribute('data-component-id', componentId);
+            componentElement.setAttribute('data-component-type', 'udp');
+            componentElement.setAttribute('draggable', 'true');
+            componentElement.innerHTML = `
+                <div class="drag-handle d-flex justify-content-between align-items-center">
+                    <span>UDP监控组件</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}">删除</button>
+                    </div>
+                </div>
+                <div class="component-form">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>监控项:</strong> ${displayText}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>间隔:</strong> ${interval}秒
+                        </div>
+                    </div>
+                </div>
+                <div class="component-controls">
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'udp', monitorId, interval})}'>
+                </div>
+            `;
+            
+            document.getElementById('noComponentsMessage').style.display = 'none';
+            document.getElementById('componentsContainer').appendChild(componentElement);
+            
+            // 绑定编辑和删除事件
+            componentElement.querySelector('.edit-component').addEventListener('click', () => editUdpComponent(componentId));
+            componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
+            
+            // 绑定拖动事件
+            bindDragEvents(componentElement);
+            
+            return componentId;
+        }
+
+        // 添加HTTP组件
+        function addHttpComponent(id = null, data = {}) {
+            const componentId = id || generateComponentId();
+            const monitorId = data.monitorId || '';
+            
+            // 查找监控项信息用于显示
+            const monitor = httpMonitors.find(m => m.id == monitorId);
+            const displayText = monitor ? `${monitor.method} ${monitor.url}` : '未知监控项';
+            const interval = monitor ? monitor.interval_seconds : 60;
+            
+            const componentElement = document.createElement('div');
+            componentElement.className = 'draggable-item';
+            componentElement.setAttribute('data-component-id', componentId);
+            componentElement.setAttribute('data-component-type', 'http');
+            componentElement.setAttribute('draggable', 'true');
+            componentElement.innerHTML = `
+                <div class="drag-handle d-flex justify-content-between align-items-center">
+                    <span>HTTP(S)监控组件</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light edit-component" data-component-id="${componentId}">编辑</button>
+                        <button class="btn btn-sm btn-outline-light remove-component" data-component-id="${componentId}">删除</button>
+                    </div>
+                </div>
+                <div class="component-form">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>监控项:</strong> ${displayText}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>间隔:</strong> ${interval}秒
+                        </div>
+                    </div>
+                </div>
+                <div class="component-controls">
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'http', monitorId, interval})}'>
+                </div>
+            `;
+            
+            document.getElementById('noComponentsMessage').style.display = 'none';
+            document.getElementById('componentsContainer').appendChild(componentElement);
+            
+            // 绑定编辑和删除事件
+            componentElement.querySelector('.edit-component').addEventListener('click', () => editHttpComponent(componentId));
+            componentElement.querySelector('.remove-component').addEventListener('click', () => removeComponent(componentId));
+            
+            // 绑定拖动事件
+            bindDragEvents(componentElement);
+            
+            return componentId;
+        }
+
+        // 编辑TCP组件
+        function editTcpComponent(componentId) {
+            currentEditComponentId = componentId;
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
+            
+            document.getElementById('tcpComponentId').value = componentId;
+            document.getElementById('tcpMonitorSelect').value = componentData.monitorId || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('tcpComponentModal'));
+            modal.show();
+        }
+
+        // 编辑UDP组件
+        function editUdpComponent(componentId) {
+            currentEditComponentId = componentId;
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
+            
+            document.getElementById('udpComponentId').value = componentId;
+            document.getElementById('udpMonitorSelect').value = componentData.monitorId || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('udpComponentModal'));
+            modal.show();
+        }
+
+        // 编辑HTTP组件
+        function editHttpComponent(componentId) {
+            currentEditComponentId = componentId;
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
+            
+            document.getElementById('httpComponentId').value = componentId;
+            document.getElementById('httpMonitorSelect').value = componentData.monitorId || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('httpComponentModal'));
+            modal.show();
+        }
+
+        // 保存TCP组件
+        function saveTcpComponent() {
+            const componentId = document.getElementById('tcpComponentId').value || generateComponentId();
+            const monitorId = document.getElementById('tcpMonitorSelect').value;
+            
+            if (!monitorId) {
+                showError('请选择TCP监控项');
+                return;
+            }
+            
+            // 获取监控项信息用于显示
+            const monitor = tcpMonitors.find(m => m.id == monitorId);
+            const displayText = monitor ? `${monitor.ip}:${monitor.port}` : '未知监控项';
+            const interval = monitor ? monitor.interval_seconds : 60;
+            
+            if (currentEditComponentId) {
+                // 更新现有组件
+                const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.component-form').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>监控项:</strong> ${displayText}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>间隔:</strong> ${interval}秒
+                        </div>
+                    </div>
+                `;
+                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'tcp', monitorId, interval});
+            } else {
+                // 添加新组件
+                addTcpComponent(componentId, {monitorId});
+            }
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('tcpComponentModal'));
+            modal.hide();
+            
+            // 重置当前编辑组件ID
+            currentEditComponentId = null;
+        }
+
+        // 保存UDP组件
+        function saveUdpComponent() {
+            const componentId = document.getElementById('udpComponentId').value || generateComponentId();
+            const monitorId = document.getElementById('udpMonitorSelect').value;
+            
+            if (!monitorId) {
+                showError('请选择UDP监控项');
+                return;
+            }
+            
+            // 获取监控项信息用于显示
+            const monitor = udpMonitors.find(m => m.id == monitorId);
+            const displayText = monitor ? `${monitor.ip}:${monitor.port}` : '未知监控项';
+            const interval = monitor ? monitor.interval_seconds : 60;
+            
+            if (currentEditComponentId) {
+                // 更新现有组件
+                const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.component-form').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>监控项:</strong> ${displayText}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>间隔:</strong> ${interval}秒
+                        </div>
+                    </div>
+                `;
+                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'udp', monitorId, interval});
+            } else {
+                // 添加新组件
+                addUdpComponent(componentId, {monitorId});
+            }
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('udpComponentModal'));
+            modal.hide();
+            
+            // 重置当前编辑组件ID
+            currentEditComponentId = null;
+        }
+
+        // 保存HTTP组件
+        function saveHttpComponent() {
+            const componentId = document.getElementById('httpComponentId').value || generateComponentId();
+            const monitorId = document.getElementById('httpMonitorSelect').value;
+            
+            if (!monitorId) {
+                showError('请选择HTTP(S)监控项');
+                return;
+            }
+            
+            // 获取监控项信息用于显示
+            const monitor = httpMonitors.find(m => m.id == monitorId);
+            const displayText = monitor ? `${monitor.method} ${monitor.url}` : '未知监控项';
+            const interval = monitor ? monitor.interval_seconds : 60;
+            
+            if (currentEditComponentId) {
+                // 更新现有组件
+                const componentElement = document.querySelector(`[data-component-id="${currentEditComponentId}"]`);
+                componentElement.querySelector('.component-form').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>监控项:</strong> ${displayText}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>间隔:</strong> ${interval}秒
+                        </div>
+                    </div>
+                `;
+                componentElement.querySelector('.component-data').value = JSON.stringify({type: 'http', monitorId, interval});
+            } else {
+                // 添加新组件
+                addHttpComponent(componentId, {monitorId});
+            }
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('httpComponentModal'));
+            modal.hide();
+            
+            // 重置当前编辑组件ID
+            currentEditComponentId = null;
+        }
+
+        // 删除组件
+        function removeComponent(componentId) {
+            if (!confirm('确定要删除这个组件吗？')) {
+                return;
+            }
+            
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            if (componentElement) {
+                componentElement.remove();
+            }
+            
+            // 如果没有组件了，显示提示信息
+            const componentsContainer = document.getElementById('componentsContainer');
+            if (componentsContainer.children.length === 1 && componentsContainer.querySelector('#noComponentsMessage')) {
+                document.getElementById('noComponentsMessage').style.display = 'block';
+            }
+        }
+
+        // 绑定拖动事件
+        function bindDragEvents(element) {
+            element.addEventListener('dragstart', handleDragStart);
+            element.addEventListener('dragover', handleDragOver);
+            element.addEventListener('dragenter', handleDragEnter);
+            element.addEventListener('dragleave', handleDragLeave);
+            element.addEventListener('drop', handleDrop);
+            element.addEventListener('dragend', handleDragEnd);
+        }
+
+        // 当前拖动的元素
+        let draggedItem = null;
+
+        // 处理拖动开始
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+
+        // 处理拖动经过
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        // 处理拖动进入元素
+        function handleDragEnter(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        }
+
+        // 处理拖动离开元素
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        // 处理放置
+        function handleDrop(e) {
+            e.stopPropagation();
+            
+            if (draggedItem !== this) {
+                const container = document.getElementById('componentsContainer');
+                const allItems = [...container.querySelectorAll('.draggable-item')];
+                const thisIndex = allItems.indexOf(this);
+                const draggedIndex = allItems.indexOf(draggedItem);
+                
+                if (draggedIndex < thisIndex) {
+                    container.insertBefore(draggedItem, this.nextSibling);
+                } else {
+                    container.insertBefore(draggedItem, this);
+                }
+            }
+            
+            this.classList.remove('drag-over');
+            return false;
+        }
+
+        // 处理拖动结束
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.draggable-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedItem = null;
+        }
+
+        // 加载页面配置
+        async function loadPageConfig() {
+            const pageId = getUrlParameter('id');
+            if (!pageId) {
+                showError('无效的页面ID');
+                return;
+            }
+
+            try {
+                // 先加载所有监控项
+                await loadAllMonitors();
+                
+                const response = await fetch(`/api/page/${pageId}`, {
+                    headers: {
+                        'Authorization': getCookie('session')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    showError(data.message || '获取页面配置失败');
+                    return;
+                }
+
+                const page = data.page;
+
+                // 填充表单
+                document.getElementById('pageId').value = page.id;
+                document.getElementById('pageEnabled').checked = page.enabled;
+                document.getElementById('pageRoute').value = page.route || '';
+                
+                // 解析并加载组件配置
+                if (page.config) {
+                    try {
+                        const config = JSON.parse(page.config);
+                        if (Array.isArray(config)) {
+                            config.forEach(component => {
+                                switch (component.type) {
+                                    case 'tcp':
+                                        addTcpComponent(null, component);
+                                        break;
+                                    case 'udp':
+                                        addUdpComponent(null, component);
+                                        break;
+                                    case 'http':
+                                        addHttpComponent(null, component);
+                                        break;
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error parsing page config:', e);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading page config:', error);
+                showError('加载页面配置时发生错误');
+            }
+        }
+
+        // 保存页面配置
+        async function savePageConfig() {
+            const pageId = document.getElementById('pageId').value;
+            const enabled = document.getElementById('pageEnabled').checked;
+            const route = document.getElementById('pageRoute').value;
+            
+            if (!pageId) {
+                showError('无效的页面ID');
+                return;
+            }
+            
+            if (!route) {
+                showError('请填写路由');
+                return;
+            }
+
+            // 收集所有组件配置
+            const components = [];
+            const componentElements = document.querySelectorAll('.draggable-item');
+            
+            componentElements.forEach(element => {
+                try {
+                    const componentData = JSON.parse(element.querySelector('.component-data').value);
+                    components.push(componentData);
+                } catch (e) {
+                    console.error('Error parsing component data:', e);
+                }
+            });
+            
+            // 将组件配置转换为JSON字符串
+            const configJson = JSON.stringify(components);
+
+            try {
+                const response = await fetch(`/api/page/${pageId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getCookie('session')
+                    },
+                    body: JSON.stringify({ 
+                        enabled: enabled,
+                        route: route,
+                        config: configJson
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    showError(data.message || '保存页面配置失败');
+                    return;
+                }
+
+                alert('页面配置保存成功');
+            } catch (error) {
+                console.error('Error saving page config:', error);
+                showError('保存页面配置时发生错误');
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载页面配置
+            loadPageConfig();
+
+            // 绑定按钮事件
+            document.getElementById('backButton').addEventListener('click', function() {
+                window.location.href = '/dash.html';
+            });
+
+            document.getElementById('addComponent').addEventListener('click', function() {
+                const modal = new bootstrap.Modal(document.getElementById('addComponentModal'));
+                modal.show();
+            });
+
+            document.getElementById('saveConfig').addEventListener('click', savePageConfig);
+
+            // 绑定添加组件按钮事件
+            document.querySelectorAll('[data-component-type]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const componentType = this.getAttribute('data-component-type');
+                    
+                    // 关闭添加组件模态框
+                    const addModal = bootstrap.Modal.getInstance(document.getElementById('addComponentModal'));
+                    addModal.hide();
+                    
+                    // 根据组件类型打开相应的模态框
+                    switch (componentType) {
+                        case 'tcp':
+                            // 重置表单
+                            document.getElementById('tcpComponentForm').reset();
+                            document.getElementById('tcpComponentId').value = '';
+                            
+                            const tcpModal = new bootstrap.Modal(document.getElementById('tcpComponentModal'));
+                            tcpModal.show();
+                            break;
+                        case 'udp':
+                            // 重置表单
+                            document.getElementById('udpComponentForm').reset();
+                            document.getElementById('udpComponentId').value = '';
+                            
+                            const udpModal = new bootstrap.Modal(document.getElementById('udpComponentModal'));
+                            udpModal.show();
+                            break;
+                        case 'http':
+                            // 重置表单
+                            document.getElementById('httpComponentForm').reset();
+                            document.getElementById('httpComponentId').value = '';
+                            
+                            const httpModal = new bootstrap.Modal(document.getElementById('httpComponentModal'));
+                            httpModal.show();
+                            break;
+                    }
+                });
+            });
+
+            // 绑定保存组件按钮事件
+            document.getElementById('saveTcpComponent').addEventListener('click', saveTcpComponent);
+            document.getElementById('saveUdpComponent').addEventListener('click', saveUdpComponent);
+            document.getElementById('saveHttpComponent').addEventListener('click', saveHttpComponent);
+        });
+    </script>
+</body>
+</html>

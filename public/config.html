@@ -459,7 +459,7 @@
                     populateUdpMonitorSelect();
                 }
                 
-                // 加载HTTP监控项
+                // 加载HTTP(S)监控项
                 const httpResponse = await fetch('/api/http-monitors', {
                     headers: {
                         'Authorization': getCookie('session')
@@ -507,7 +507,7 @@
             });
         }
 
-        // 填充HTTP监控项选择框
+        // 填充HTTP(S)监控项选择框
         function populateHttpMonitorSelect() {
             const select = document.getElementById('httpMonitorSelect');
             select.innerHTML = '<option value="">请选择HTTP(S)监控项</option>';
@@ -612,7 +612,7 @@
                     </div>
                 </div>
                 <div class="component-controls">
-                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'udp', monitorId, interval})}'>
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'udp', monitorId, interval, title})}'>
                 </div>
             `;
             
@@ -667,7 +667,7 @@
                     </div>
                 </div>
                 <div class="component-controls">
-                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'http', monitorId, interval})}'>
+                    <input type="hidden" class="component-data" value='${JSON.stringify({type: 'http', monitorId, interval, title})}'>
                 </div>
             `;
             
@@ -769,7 +769,7 @@
             const componentData = JSON.parse(componentElement.querySelector('.component-data').value);
             
             document.getElementById('httpComponentId').value = componentId;
-            document.getElementById('httpTitle').value = componentData.title || 'HTTP监控组件';
+            document.getElementById('httpTitle').value = componentData.title || 'HTTP(S)监控组件';
             document.getElementById('httpMonitorSelect').value = componentData.monitorId || '';
             
             const modal = new bootstrap.Modal(document.getElementById('httpComponentModal'));
@@ -1669,9 +1669,9 @@
 
                     const result = await response.json();
                     if (result.success) {
-                        alert('HTTP监控配置保存成功');
+                        alert('HTTP(S)监控配置保存成功');
                         bootstrap.Modal.getInstance(document.getElementById('httpConfigModal')).hide();
-                        loadHttpMonitors(); // 重新加载HTTP监控列表
+                        loadHttpMonitors(); // 重新加载HTTP(S)监控列表
                     } else {
                         alert('保存失败: ' + result.message);
                     }

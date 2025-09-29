@@ -63,6 +63,9 @@
         // 全局变量
         let pageId = null;
         let pageRoute = null;
+        let currentComponents = [];
+        let refreshInterval = null;
+        let countdownInterval = null;
         
         // 初始化页面
         async function initPage() {
@@ -208,6 +211,12 @@
                             container.appendChild(componentElement);
                     }
                 }
+                
+                // 保存当前组件列表
+                currentComponents = components;
+                
+                // 启动自动刷新功能
+                startAutoRefresh();
             } catch (error) {
                 console.error('Error loading components:', error);
                 document.getElementById('components-container').innerHTML = 
@@ -461,6 +470,93 @@
             await Promise.all(promises);
             
             return provinceStatus;
+        }
+        
+        // 启动自动刷新功能
+        function startAutoRefresh() {
+            // 清除现有的定时器（如果有的话）
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            // 设置5秒自动刷新
+            refreshInterval = setInterval(async () => {
+                try {
+                    if (currentComponents && currentComponents.length > 0) {
+                        // 直接刷新各个监控项的数据
+                        await refreshMonitorData();
+                    }
+                } catch (error) {
+                    console.error('Error in auto-refresh:', error);
+                }
+            }, 5000);
+
+            // 启动倒计时
+            // startCountdown();
+        }
+        
+        // 刷新数据功能 - 只更新内容，不重新渲染控件
+        async function refreshData() {
+            const refreshButton = document.getElementById('refresh-button');
+            const originalText = refreshButton.innerHTML;
+            
+            // 显示正在刷新状态
+            refreshButton.innerHTML = '<i class="bi bi-arrow-repeat"></i> 正在刷新...';
+            refreshButton.disabled = true;
+            
+            try {
+                if (currentComponents && currentComponents.length > 0) {
+                    // 直接刷新各个监控项的数据
+                    await refreshMonitorData();
+                } else {
+                    // 如果没有当前组件配置，则重新初始化整个页面
+                    await initPage();
+                }
+                
+                // 重置倒计时
+                resetCountdown();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                // 不要替换整个容器内容，只显示警告
+                alert('刷新数据时发生错误: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                refreshButton.innerHTML = originalText;
+                refreshButton.disabled = false;
+            }
+        }
+        
+        // 直接刷新监控数据
+        async function refreshMonitorData() {
+            // 为每个组件更新数据
+            const refreshPromises = currentComponents.map(async (component) => {
+                switch (component.type) {
+                    case 'tcp':
+                        await loadTcpMonitor(component.monitorId, null, component);
+                        break;
+                    case 'udp':
+                        await loadUdpMonitor(component.monitorId, null, component);
+                        break;
+                    case 'http':
+                        await loadHttpMonitor(component.monitorId, null, component);
+                        break;
+                    case 'map':
+                        // 地图组件需要特殊处理，重新加载数据
+                        const mapChartElement = document.querySelector(`#map-chart-${component.name || 'map'}`);
+                        if (mapChartElement) {
+                            const mapComponentElement = mapChartElement.closest('.component-container');
+                            initMapComponent(component, mapComponentElement);
+                        }
+                        break;
+                }
+            });
+            
+            // 等待所有更新完成
+            await Promise.all(refreshPromises);
         }
     </script>
 </body>

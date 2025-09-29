@@ -58,6 +58,17 @@
         </div>
     </div>
     
+    <!-- 页脚 - 显示数据更新时间 -->
+    <footer class="container mt-4 mb-4">
+        <div class="row">
+            <div class="col text-center">
+                <small class="text-muted">
+                    数据更新时间: <span id="last-update-time">尚未更新</span>
+                </small>
+            </div>
+        </div>
+    </footer>
+    
     <script src="/js/bootstrap.bundle.min.js"></script>
     <script>
         // 全局变量
@@ -215,6 +226,10 @@
                 // 保存当前组件列表
                 currentComponents = components;
                 
+                // 设置初始更新时间
+                const currentTime = new Date();
+                document.getElementById('last-update-time').textContent = currentTime.toLocaleString('zh-CN');
+                
                 // 启动自动刷新功能
                 startAutoRefresh();
             } catch (error) {
@@ -225,19 +240,21 @@
         }
         
         // 计算状态图标
-        function calculateStatusIcon(results) {
+        function calculateStatusIcon(results, monitorId, type) {
             if (!results || results.length === 0) {
-                return '<span class="status-icon status-unknown" title="未知状态"><i class="bi bi-question-circle"></i></span>'; // 未知状态
+                return `<span class="status-icon status-unknown" title="未知状态" data-bs-toggle="tooltip" data-bs-html="true" data-bs-title="未知状态<br>最新检查: 无数据"><i class="bi bi-question-circle"></i></span>`; // 未知状态
             }
             
             const successCount = results.filter(r => r.success).length;
+            const latestResult = results[0]; // 最新的结果在数组的第一个位置
+            const latestTime = latestResult.timestamp ? new Date(latestResult.timestamp).toLocaleString('zh-CN') : '未知时间';
             
             if (successCount === results.length) {
-                return '<span class="status-icon status-success" title="全部成功"><i class="bi bi-check-circle"></i></span>'; // 全部成功 - 绿色勾
+                return `<span class="status-icon status-success" title="全部成功" data-bs-toggle="tooltip" data-bs-html="true" data-bs-title="全部成功<br>${latestTime}"><i class="bi bi-check-circle"></i></span>`; // 全部成功 - 绿色勾
             } else if (successCount === 0) {
-                return '<span class="status-icon status-danger" title="全部失败"><i class="bi bi-x-circle"></i></span>'; // 全部失败 - 红色叉
+                return `<span class="status-icon status-danger" title="全部失败" data-bs-toggle="tooltip" data-bs-html="true" data-bs-title="全部失败<br>${latestTime}"><i class="bi bi-x-circle"></i></span>`; // 全部失败 - 红色叉
             } else {
-                return '<span class="status-icon status-warning" title="部分失败"><i class="bi bi-exclamation-triangle"></i></span>'; // 部分失败 - 黄色三角
+                return `<span class="status-icon status-warning" title="部分失败" data-bs-toggle="tooltip" data-bs-html="true" data-bs-title="部分失败<br>${latestTime}"><i class="bi bi-exclamation-triangle"></i></span>`; // 部分失败 - 黄色三角
             }
         }
         
@@ -246,6 +263,9 @@
             const element = document.getElementById(elementId);
             if (element) {
                 element.innerHTML = statusIcon;
+                // 初始化Bootstrap tooltip
+                const tooltipTriggerList = element.querySelectorAll('[data-bs-toggle="tooltip"]');
+                [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
             }
         }
         
@@ -261,11 +281,11 @@
                 });
                 
                 const resultsData = await resultsResponse.json();
-                const statusIcon = calculateStatusIcon(resultsData.results);
+                const statusIcon = calculateStatusIcon(resultsData.results, monitorId, 'tcp');
                 updateStatusIcon(`tcp-status-${monitorId}`, statusIcon);
             } catch (error) {
                 console.error('Error loading TCP monitor:', error);
-                updateStatusIcon(`tcp-status-${monitorId}`, '<span class="status-icon status-unknown" title="加载错误"><i class="bi bi-question-circle"></i></span>');
+                updateStatusIcon(`tcp-status-${monitorId}`, '<span class="status-icon status-unknown" title="加载错误" data-bs-toggle="tooltip" data-bs-title="加载错误"><i class="bi bi-question-circle"></i></span>');
             }
         }
         
@@ -281,11 +301,11 @@
                 });
                 
                 const resultsData = await resultsResponse.json();
-                const statusIcon = calculateStatusIcon(resultsData.results);
+                const statusIcon = calculateStatusIcon(resultsData.results, monitorId, 'udp');
                 updateStatusIcon(`udp-status-${monitorId}`, statusIcon);
             } catch (error) {
                 console.error('Error loading UDP monitor:', error);
-                updateStatusIcon(`udp-status-${monitorId}`, '<span class="status-icon status-unknown" title="加载错误"><i class="bi bi-question-circle"></i></span>');
+                updateStatusIcon(`udp-status-${monitorId}`, '<span class="status-icon status-unknown" title="加载错误" data-bs-toggle="tooltip" data-bs-title="加载错误"><i class="bi bi-question-circle"></i></span>');
             }
         }
         
@@ -301,17 +321,21 @@
                 });
                 
                 const resultsData = await resultsResponse.json();
-                const statusIcon = calculateStatusIcon(resultsData.results);
+                const statusIcon = calculateStatusIcon(resultsData.results, monitorId, 'http');
                 updateStatusIcon(`http-status-${monitorId}`, statusIcon);
             } catch (error) {
                 console.error('Error loading HTTP monitor:', error);
-                updateStatusIcon(`http-status-${monitorId}`, '<span class="status-icon status-unknown" title="加载错误"><i class="bi bi-question-circle"></i></span>');
+                updateStatusIcon(`http-status-${monitorId}`, '<span class="status-icon status-unknown" title="加载错误" data-bs-toggle="tooltip" data-bs-title="加载错误"><i class="bi bi-question-circle"></i></span>');
             }
         }
         
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
             initPage();
+            
+            // 启用Bootstrap tooltip功能
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
         });
         
         // 初始化地图组件
@@ -517,6 +541,10 @@
                     await initPage();
                 }
                 
+                // 更新时间显示
+                const updateTime = new Date();
+                document.getElementById('last-update-time').textContent = updateTime.toLocaleString('zh-CN');
+                
                 // 重置倒计时
                 resetCountdown();
             } catch (error) {
@@ -532,6 +560,10 @@
         
         // 直接刷新监控数据
         async function refreshMonitorData() {
+            // 记录更新时间
+            const updateTime = new Date();
+            document.getElementById('last-update-time').textContent = updateTime.toLocaleString('zh-CN');
+            
             // 为每个组件更新数据
             const refreshPromises = currentComponents.map(async (component) => {
                 switch (component.type) {

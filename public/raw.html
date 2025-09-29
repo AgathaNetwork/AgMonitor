@@ -118,6 +118,11 @@
                 
                 // 设置页面标题
                 document.getElementById('page-main-title').textContent = pageRoute;
+
+                // 设置浏览器标题
+                document.title = pageRoute;
+
+
                 pageId = page.id;
                 
                 // 加载页面组件
@@ -171,6 +176,8 @@
                         case 'title':
                             // 设置页面主标题
                             document.getElementById('page-main-title').textContent = component.title || '监控面板';
+                            // 设置浏览器标题
+                            document.title = component.title || '监控面板';
                             break;
                         case 'tcp':
                             componentElement.innerHTML = `

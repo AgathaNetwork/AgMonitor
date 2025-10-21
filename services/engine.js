@@ -8,6 +8,7 @@ class MonitoringEngine {
         this.db = new SQLiteManager();
         this.running = false;
         this.monitoringInterval = null;
+        this.cleanupInterval = null;
     }
 
     async init() {
@@ -29,6 +30,11 @@ class MonitoringEngine {
             this.performMonitoring();
         }, 1000);
         
+        // Run cleanup every 1 minute (60 seconds)
+        this.cleanupInterval = setInterval(() => {
+            this.performCleanup();
+        }, 60000);
+        
         // Run initial check
         this.performMonitoring();
     }
@@ -43,6 +49,9 @@ class MonitoringEngine {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
         }
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+        }
         console.log('Monitoring engine stopped');
     }
 
@@ -54,6 +63,17 @@ class MonitoringEngine {
             await this.checkHttpMonitors();
         } catch (error) {
             console.error('Error during monitoring:', error);
+        }
+    }
+
+    async performCleanup() {
+        console.log('Performing cleanup of old records...');
+        try {
+            await this.db.deleteOldTcpResults();
+            await this.db.deleteOldUdpResults();
+            await this.db.deleteOldHttpResults();
+        } catch (error) {
+            console.error('Error during cleanup:', error);
         }
     }
 

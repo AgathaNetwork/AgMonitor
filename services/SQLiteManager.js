@@ -764,6 +764,60 @@ class SQLiteManager {
             });
         });
     }
+    
+    // 删除超过1小时的TCP监控结果
+    deleteOldTcpResults() {
+        return new Promise((resolve, reject) => {
+            const query = `
+                DELETE FROM monitor_tcp_results 
+                WHERE timestamp < datetime('now', '-1 hour')
+            `;
+            this.db.run(query, [], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`Deleted ${this.changes} old TCP monitor results`);
+                    resolve(this.changes);
+                }
+            });
+        });
+    }
+    
+    // 删除超过1小时的UDP监控结果
+    deleteOldUdpResults() {
+        return new Promise((resolve, reject) => {
+            const query = `
+                DELETE FROM monitor_udp_results 
+                WHERE timestamp < datetime('now', '-1 hour')
+            `;
+            this.db.run(query, [], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`Deleted ${this.changes} old UDP monitor results`);
+                    resolve(this.changes);
+                }
+            });
+        });
+    }
+    
+    // 删除超过1小时的HTTP监控结果
+    deleteOldHttpResults() {
+        return new Promise((resolve, reject) => {
+            const query = `
+                DELETE FROM monitor_http_results 
+                WHERE timestamp < datetime('now', '-1 hour')
+            `;
+            this.db.run(query, [], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log(`Deleted ${this.changes} old HTTP monitor results`);
+                    resolve(this.changes);
+                }
+            });
+        });
+    }
 }
 
 module.exports = SQLiteManager;

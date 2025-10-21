@@ -14,6 +14,14 @@ class MonitoringEngine {
     async init() {
         await this.db.init();
         console.log('Monitoring engine initialized');
+        
+        // Run VACUUM on startup to optimize database
+        try {
+            await this.db.vacuum();
+            console.log('Database optimized with VACUUM');
+        } catch (error) {
+            console.error('Error running VACUUM on startup:', error);
+        }
     }
 
     start() {

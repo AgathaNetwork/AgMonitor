@@ -818,6 +818,20 @@ class SQLiteManager {
             });
         });
     }
+    
+    // Optimize database with VACUUM command
+    async vacuum() {
+        return new Promise((resolve, reject) => {
+            this.db.run('VACUUM', [], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log('Database vacuum completed successfully');
+                    resolve();
+                }
+            });
+        });
+    }
 }
 
 module.exports = SQLiteManager;
